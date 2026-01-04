@@ -32,9 +32,10 @@ defmodule Mix.Tasks.Phx.Gen.Gql.Init do
       web_mod: web_mod
     ]
 
-    create_types_aggregator(binding)
     create_schema_file(binding)
+    create_types_aggregator(binding)
     inject_router_config(binding)
+    inject_dependencies()
 
     Mix.shell().info("GraphQL initialization complete!")
   end
@@ -42,13 +43,45 @@ defmodule Mix.Tasks.Phx.Gen.Gql.Init do
   defp create_schema_file(binding) do
     content = schema_template(binding)
     file_path = "lib/#{binding[:app]}_web/graphql/schema.ex"
-    Mix.Generator.create_file(file_path, content, format_elixir: true)
+    Mix.Generator.create_file(file_path, content)
   end
 
   defp create_types_aggregator(binding) do
     content = types_aggregator_template(binding)
-    file_path = "lib/#{binding[:app]}_web/graphql/type.ex"
-    Mix.Generator.create_file(file_path, content, format_elixir: true)
+    file_path = "lib/#{binding[:app]}_web/graphql/types.ex"
+    Mix.Generator.create_file(file_path, content)
+  end
+
+  defp inject_dependencies do
+    mix_path = "mix.exs"
+
+    if File.exists?(mix_path) do
+      content = File.read!(mix_path)
+
+      if String.contains?(content, ":absinthe") do
+        Mix.shell().info("Absinthe dependencies already present.")
+      else
+        Mix.shell().info("Injecting Absinthe dependencies into mix.exs...")
+
+        new_deps = """
+            {:absinthe, "~> 1.9.0"},
+            {:absinthe_plug, "~> 1.5.9"},
+        """
+
+        new_content = Regex.replace(~r/(defp deps do\s+\[)/, content, "\\1\n#{new_deps}")
+
+        if new_content != content do
+          File.write!(mix_path, new_content)
+          Mix.shell().info("Dependencies injected. Run `mix deps.get` to install them.")
+        else
+          Mix.shell().error(
+            "Could not safely inject dependencies. Please add {:absinthe, \"~> 1.7\"} manually."
+          )
+        end
+      end
+    else
+      Mix.shell().error("Could not find mix.exs")
+    end
   end
 
   defp inject_router_config(binding) do
