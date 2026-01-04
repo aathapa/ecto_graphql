@@ -5,12 +5,12 @@
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `phx_gen_gql` to your list of dependencies in `mix.exs`:
+by adding `gql_gen` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:phx_gen_gql, "~> 0.1.0"}
+    {:gql_gen, "~> 0.1.0"}
   ]
 end
 ```

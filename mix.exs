@@ -1,9 +1,9 @@
-defmodule PhxGenGql.MixProject do
+defmodule GqlGen.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :phx_gen_gql,
+      app: :gql_gen,
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,

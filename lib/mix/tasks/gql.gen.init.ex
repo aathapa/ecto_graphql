@@ -1,10 +1,10 @@
-defmodule Mix.Tasks.Phx.Gen.Gql.Init do
+defmodule Mix.Tasks.Gql.Gen.Init do
   @shortdoc "Initializes Absinthe GraphQL in a Phoenix project"
 
   @moduledoc """
   Initializes Absinthe GraphQL in a Phoenix project.
 
-      $ mix phx.gen.gql.init
+      $ mix gql.gen.init
 
   This task:
   1. Creates `lib/my_app_web/graphql/schema.ex` (Root Schema).
@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Phx.Gen.Gql.Init do
   @impl true
   def run(_args) do
     if Mix.Project.umbrella?() do
-      Mix.raise("mix phx.gen.gql.init can only be run within an application directory")
+      Mix.raise("mix gql.gen.init can only be run within an application directory")
     end
 
     app = Mix.Project.config()[:app]
