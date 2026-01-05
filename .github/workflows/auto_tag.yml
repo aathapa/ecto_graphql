@@ -1,0 +1,33 @@
+name: Auto Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get Version
+        id: version
+        run: |
+          VERSION=$(grep 'version:' mix.exs | cut -d '"' -f2)
+          echo "::set-output name=tag::v$VERSION"
+          echo "Found version: v$VERSION"
+
+      - name: Check and Push Tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping."
+          else
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+            git tag $TAG
+            git push origin $TAG
+          fi
