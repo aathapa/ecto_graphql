@@ -1,21 +1,21 @@
-# PhxGenGql
+# EctoGraphql
 
 **TODO: Add description**
 
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `gql_gen` to your list of dependencies in `mix.exs`:
+by adding `ecto_graphql` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:gql_gen, "~> 0.1.0"}
+    {:ecto_graphql, "~> 0.1.0"}
   ]
 end
 ```
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/phx_gen_gql>.
+be found at <https://hexdocs.pm/ecto_graphql>.
 

@@ -1,6 +1,6 @@
-defmodule GqlGen do
+defmodule EctoGraphql do
   @moduledoc """
-  Documentation for `PhxGenGql`.
+  Documentation for `EctoGraphql`.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule GqlGen do
 
   ## Examples
 
-      iex> PhxGenGql.hello()
+      iex> EctoGraphql.hello()
       :world
 
   """

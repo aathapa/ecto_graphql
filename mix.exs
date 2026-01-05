@@ -1,17 +1,17 @@
-defmodule GqlGen.MixProject do
+defmodule EctoGraphql.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :gql_gen,
+      app: :ecto_graphql,
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
       deps: deps(),
-      name: "GqlGen",
-      source_url: "https://github.com/aathapa/gql_gen"
+      name: "EctoGraphql",
+      source_url: "https://github.com/aathapa/ecto_graphql"
     ]
   end
 
@@ -37,9 +37,9 @@ defmodule GqlGen.MixProject do
 
   defp package do
     [
-      name: "gql_gen",
+      name: "ecto_graphql",
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/aathapa/gql_gen"}
+      links: %{"GitHub" => "https://github.com/aathapa/ecto_graphql"}
     ]
   end
 end
