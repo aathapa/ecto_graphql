@@ -46,6 +46,7 @@ defmodule Mix.Tasks.Gql.Gen do
 
     update_type(binding)
     inject_context_import(binding)
+    create_resolver(binding)
 
     Mix.shell().info("Generated GraphQL files for #{schema}!")
   end
@@ -86,6 +87,27 @@ defmodule Mix.Tasks.Gql.Gen do
       Mix.shell().info("Creating #{file_path}...")
       content = context_types_module_template(binding)
       full_content = String.replace(content, "# types go here", new_type_content)
+      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
+    end
+  end
+
+  defp create_resolver(binding) do
+    dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
+    File.mkdir_p!(dir_path)
+
+    file_path = Path.join(dir_path, "resolvers.ex")
+    new_resolver_content = resolver_functions_template(binding)
+
+    if File.exists?(file_path) do
+      Mix.shell().info("Updating #{file_path}...")
+      content = File.read!(file_path)
+      updated_content = Regex.replace(~r/end\s*$/, content, "\n#{new_resolver_content}\nend")
+      File.write!(file_path, updated_content)
+      Mix.Task.run("format", [file_path])
+    else
+      Mix.shell().info("Creating #{file_path}...")
+      content = resolver_module_template(binding)
+      full_content = String.replace(content, "# resolvers go here", new_resolver_content)
       Mix.Generator.create_file(file_path, full_content, format_elixir: true)
     end
   end
@@ -145,6 +167,48 @@ defmodule Mix.Tasks.Gql.Gen do
       input_object :<%= @schema_singular %>_params do
     <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
     <% end %>  end
+    """,
+    [:assigns]
+  )
+
+  # Template for the Resolver Module (created once)
+  EEx.function_from_string(
+    :defp,
+    :resolver_module_template,
+    """
+    defmodule <%= @web_mod %>.Graphql.<%= @context %>.Resolvers do
+      alias <%= @base %>.<%= @context %>
+
+      # resolvers go here
+    end
+    """,
+    [:assigns]
+  )
+
+  # Template for Resolver Functions
+  EEx.function_from_string(
+    :defp,
+    :resolver_functions_template,
+    """
+      def list_<%= @schema_plural %>(_parent, _args, _resolution) do
+        {:ok, <%= @context %>.list_<%= @schema_plural %>()}
+      end
+
+      def get_<%= @schema_singular %>(_parent, %{id: id}, _resolution) do
+        case <%= @context %>.get_<%= @schema_singular %>(id) do
+          nil -> {:error, "Not found"}
+          <%= @schema_singular %> -> {:ok, <%= @schema_singular %>}
+        end
+      end
+
+      def create_<%= @schema_singular %>(_parent, args, _resolution) do
+        <%= @context %>.create_<%= @schema_singular %>(args)
+      end
+
+      def update_<%= @schema_singular %>(_parent, %{id: id} = args, _resolution) do
+        <%= @schema_singular %> = <%= @context %>.get_<%= @schema_singular %>(id)
+        <%= @context %>.update_<%= @schema_singular %>(<%= @schema_singular %>, args)
+      end
     """,
     [:assigns]
   )
