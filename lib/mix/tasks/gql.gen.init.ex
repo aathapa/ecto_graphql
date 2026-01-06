@@ -175,7 +175,7 @@ defmodule Mix.Tasks.Gql.Gen.Init do
     :defp,
     :types_aggregator_template,
     """
-    defmodule <%= @web_mod %>.Graphql.Type do
+    defmodule <%= @web_mod %>.Graphql.Types do
       use Absinthe.Schema.Notation
 
       # Import generated types here
