@@ -72,6 +72,7 @@ defmodule Mix.Tasks.Gql.Gen.Init do
 
         if new_content != content do
           File.write!(mix_path, new_content)
+          Mix.Task.run("format", [mix_path])
           Mix.shell().info("Dependencies injected. Run `mix deps.get` to install them.")
         else
           Mix.shell().error(
