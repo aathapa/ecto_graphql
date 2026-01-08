@@ -1,0 +1,12 @@
+defmodule <%= @web_mod %>.Graphql.<%= @context %>.Schema do
+  use Absinthe.Schema.Notation
+  alias <%= @web_mod %>.Graphql.<%= @context %>.Resolvers
+
+  import_types <%= @web_mod %>.Graphql.<%= @context %>.Types
+
+  @moduledoc """
+  GraphQL schema for the <%= @context %> context.
+  """
+
+  # content go here
+end

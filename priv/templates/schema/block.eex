@@ -1,0 +1,23 @@
+  object :<%= @schema_singular %>_queries do
+    field :list_<%= @schema_plural %>, list_of(:<%= @schema_singular %>) do
+      resolve &Resolvers.list_<%= @schema_plural %>/3
+    end
+
+    field :get_<%= @schema_singular %>, :<%= @schema_singular %> do
+      arg :id, non_null(:id)
+      resolve &Resolvers.get_<%= @schema_singular %>/3
+    end
+  end
+
+  object :<%= @schema_singular %>_mutations do
+    field :create_<%= @schema_singular %>, :<%= @schema_singular %> do
+      arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
+      resolve &Resolvers.create_<%= @schema_singular %>/3
+    end
+
+    field :update_<%= @schema_singular %>, :<%= @schema_singular %> do
+      arg :id, non_null(:id)
+      arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
+      resolve &Resolvers.update_<%= @schema_singular %>/3
+    end
+  end

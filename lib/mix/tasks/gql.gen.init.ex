@@ -43,13 +43,13 @@ defmodule Mix.Tasks.Gql.Gen.Init do
   defp create_schema_file(binding) do
     content = schema_template(binding)
     file_path = "lib/#{binding[:app]}_web/graphql/schema.ex"
-    Mix.Generator.create_file(file_path, content)
+    Mix.Generator.create_file(file_path, content, format_elixir: true)
   end
 
   defp create_types_aggregator(binding) do
     content = types_aggregator_template(binding)
     file_path = "lib/#{binding[:app]}_web/graphql/types.ex"
-    Mix.Generator.create_file(file_path, content)
+    Mix.Generator.create_file(file_path, content, format_elixir: true)
   end
 
   defp inject_dependencies do
@@ -156,13 +156,13 @@ defmodule Mix.Tasks.Gql.Gen.Init do
       end
 
       query do
-        field :get_user, :string do
+        field :get, :string do
           resolve fn _, _, _ -> {:ok, "user"} end
         end
       end
 
       mutation do
-        field :create_user, :string do
+        field :create, :string do
           resolve fn _, _, _ -> {:ok, "user"} end
         end
       end

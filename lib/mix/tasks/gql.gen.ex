@@ -13,6 +13,8 @@ defmodule Mix.Tasks.Gql.Gen do
 
   use Mix.Task
 
+  alias EctoGraphql.Generator
+
   @requirements ["app.start"]
 
   @impl true
@@ -20,8 +22,6 @@ defmodule Mix.Tasks.Gql.Gen do
     if Mix.Project.umbrella?() do
       Mix.raise("mix gql.gen can only be run within an application directory")
     end
-
-    IO.inspect(args, label: "args")
 
     {context, schema, fields} = parse_args(args)
 
@@ -54,43 +54,16 @@ defmodule Mix.Tasks.Gql.Gen do
   defp update_type(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
-
     file_path = Path.join(dir_path, "type.ex")
-    new_type_content = type_block_template(binding)
 
-    if File.exists?(file_path) do
-      Mix.shell().info("Updating #{file_path}...")
-      content = File.read!(file_path)
-      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_type_content}\nend")
-      File.write!(file_path, updated_content)
-      Mix.Task.run("format", [file_path])
-    else
-      Mix.shell().info("Creating #{file_path}...")
-      content = context_types_module_template(binding)
-      full_content = String.replace(content, "# types go here", new_type_content)
-      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
-    end
+    Generator.generate(:type, file_path, binding)
   end
 
   defp update_resolver(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
-
     file_path = Path.join(dir_path, "resolvers.ex")
-    new_resolver_content = resolver_functions_template(binding)
-
-    if File.exists?(file_path) do
-      Mix.shell().info("Updating #{file_path}...")
-      content = File.read!(file_path)
-      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_resolver_content}\nend")
-      File.write!(file_path, updated_content)
-      Mix.Task.run("format", [file_path])
-    else
-      Mix.shell().info("Creating #{file_path}...")
-      content = resolver_module_template(binding)
-      full_content = String.replace(content, "# resolvers go here", new_resolver_content)
-      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
-    end
+    Generator.generate(:resolver, file_path, binding)
   end
 
   def update_schema(binding) do
@@ -98,20 +71,7 @@ defmodule Mix.Tasks.Gql.Gen do
     File.mkdir_p!(dir_path)
 
     file_path = Path.join(dir_path, "schema.ex")
-    new_schema_content = schema_template(binding)
-
-    if File.exists?(file_path) do
-      Mix.shell().info("Updating #{file_path}...")
-      content = File.read!(file_path)
-      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_schema_content}\nend")
-      File.write!(file_path, updated_content)
-      Mix.Task.run("format", [file_path])
-    else
-      Mix.shell().info("Creating #{file_path}...")
-      content = schema_module_template(binding)
-      full_content = String.replace(content, "# schema go here", new_schema_content)
-      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
-    end
+    Generator.generate(:schema, file_path, binding)
   end
 
   defp inject_schema_import(binding) do
@@ -126,7 +86,7 @@ defmodule Mix.Tasks.Gql.Gen do
         :ok
       else
         Mix.shell().info("Injecting schema import into #{types_aggregator_path}...")
-        new_content = String.replace(content, ~r/end\s*$/, "\n#{import_line}\nend")
+        new_content = Generator.inject_before_final_end(content, import_line)
         File.write!(types_aggregator_path, new_content)
         Mix.Task.run("format", [types_aggregator_path])
       end
@@ -138,28 +98,19 @@ defmodule Mix.Tasks.Gql.Gen do
 
     if File.exists?(root_schema_path) do
       content = File.read!(root_schema_path)
-
       query_import = "import_fields :#{binding[:schema_singular]}_queries"
       mutation_import = "import_fields :#{binding[:schema_singular]}_mutations"
 
       new_content =
         content
-        |> inject_into_block("query", query_import)
-        |> inject_into_block("mutation", mutation_import)
+        |> Generator.inject_into_block("query", query_import)
+        |> Generator.inject_into_block("mutation", mutation_import)
 
       if new_content != content do
         Mix.shell().info("Injecting fields into #{root_schema_path}...")
         File.write!(root_schema_path, new_content)
         Mix.Task.run("format", [root_schema_path])
       end
-    end
-  end
-
-  defp inject_into_block(content, block_name, injection) do
-    if String.contains?(content, injection) do
-      content
-    else
-      String.replace(content, ~r/(#{block_name}\s+do)/, "\\1\n    #{injection}")
     end
   end
 
@@ -190,126 +141,4 @@ defmodule Mix.Tasks.Gql.Gen do
   end
 
   require EEx
-
-  # Template for the Context Types Module (created once)
-  EEx.function_from_string(
-    :defp,
-    :context_types_module_template,
-    """
-    defmodule <%= @web_mod %>.Graphql.<%= @context %>.Types do
-      use Absinthe.Schema.Notation
-
-      # types go here
-    end
-    """,
-    [:assigns]
-  )
-
-  # Template for a single Type Block
-  EEx.function_from_string(
-    :defp,
-    :type_block_template,
-    """
-      object :<%= @schema_singular %> do
-        field :id, :id
-    <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
-    <% end %>  end
-
-      input_object :<%= @schema_singular %>_params do
-    <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
-    <% end %>  end
-    """,
-    [:assigns]
-  )
-
-  # Template for the Resolver Module (created once)
-  EEx.function_from_string(
-    :defp,
-    :resolver_module_template,
-    """
-    defmodule <%= @web_mod %>.Graphql.<%= @context %>.Resolvers do
-      alias <%= @base %>.<%= @context %>
-
-      # resolvers go here
-    end
-    """,
-    [:assigns]
-  )
-
-  # Template for Resolver Functions
-  EEx.function_from_string(
-    :defp,
-    :resolver_functions_template,
-    """
-      def list_<%= @schema_plural %>(_parent, _args, _resolution) do
-        {:ok, <%= @context %>.list_<%= @schema_plural %>()}
-      end
-
-      def get_<%= @schema_singular %>(_parent, %{id: id}, _resolution) do
-        case <%= @context %>.get_<%= @schema_singular %>(id) do
-          nil -> {:error, "Not found"}
-          <%= @schema_singular %> -> {:ok, <%= @schema_singular %>}
-        end
-      end
-
-      def create_<%= @schema_singular %>(_parent, args, _resolution) do
-        <%= @context %>.create_<%= @schema_singular %>(args)
-      end
-
-      def update_<%= @schema_singular %>(_parent, %{id: id} = args, _resolution) do
-        <%= @schema_singular %> = <%= @context %>.get_<%= @schema_singular %>(id)
-        <%= @context %>.update_<%= @schema_singular %>(<%= @schema_singular %>, args)
-      end
-    """,
-    [:assigns]
-  )
-
-  # Template for the Schema Module (created once)
-  EEx.function_from_string(
-    :defp,
-    :schema_module_template,
-    """
-    defmodule <%= @web_mod %>.Graphql.<%= @context %>.Schema do
-      use Absinthe.Schema.Notation
-      alias <%= @web_mod %>.Graphql.<%= @context %>.Resolvers
-
-      import_types <%= @web_mod %>.Graphql.<%= @context %>.Types
-
-      # schema go here
-    end
-    """,
-    [:assigns]
-  )
-
-  # Template for Schema Objects (Queries/Mutations)
-  EEx.function_from_string(
-    :defp,
-    :schema_template,
-    """
-      object :<%= @schema_singular %>_queries do
-        field :list_<%= @schema_plural %>, list_of(:<%= @schema_singular %>) do
-          resolve &Resolvers.list_<%= @schema_plural %>/3
-        end
-
-        field :get_<%= @schema_singular %>, :<%= @schema_singular %> do
-          arg :id, non_null(:id)
-          resolve &Resolvers.get_<%= @schema_singular %>/3
-        end
-      end
-
-      object :<%= @schema_singular %>_mutations do
-        field :create_<%= @schema_singular %>, :<%= @schema_singular %> do
-          arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
-          resolve &Resolvers.create_<%= @schema_singular %>/3
-        end
-
-        field :update_<%= @schema_singular %>, :<%= @schema_singular %> do
-          arg :id, non_null(:id)
-          arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
-          resolve &Resolvers.update_<%= @schema_singular %>/3
-        end
-      end
-    """,
-    [:assigns]
-  )
 end

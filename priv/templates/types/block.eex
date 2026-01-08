@@ -1,0 +1,8 @@
+  object :<%= @schema_singular %> do
+    field :id, :id
+    <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
+    <% end %>  end
+
+  input_object :<%= @schema_singular %>_params do
+<%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
+<% end %>  end

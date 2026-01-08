@@ -1,0 +1,9 @@
+defmodule <%= @web_mod %>.Graphql.<%= @context %>.Resolvers do
+  alias <%= @base %>.<%= @context %>
+
+  @moduledoc """
+  GraphQL resolvers for the <%= @context %> context.
+  """
+
+  # content go here
+end

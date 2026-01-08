@@ -1,0 +1,28 @@
+  @doc """
+  Lists all <%= @schema_plural %>.
+  """
+  def list_<%= @schema_plural %>(_parent, _args, _resolution) do
+    {:ok, <%= @context %>.list_<%= @schema_plural %>()}
+  end
+
+  @doc """
+  Gets a single <%= @schema_singular %>.
+  """
+  def get_<%= @schema_singular %>(_parent, %{id: id}, _resolution) do
+    <%= @context %>.get_<%= @schema_singular %>!(id)
+  end
+
+  @doc """
+  Creates a <%= @schema_singular %>.
+  """
+  def create_<%= @schema_singular %>(_parent, args, _resolution) do
+    <%= @context %>.create_<%= @schema_singular %>(args)
+  end
+
+  @doc """
+  Updates a <%= @schema_singular %>.
+  """
+  def update_<%= @schema_singular %>(_parent, %{id: id} = args, _resolution) do
+    <%= @schema_singular %> = <%= @context %>.get_<%= @schema_singular %>!(id)
+    <%= @context %>.update_<%= @schema_singular %>(<%= @schema_singular %>, args)
+  end
