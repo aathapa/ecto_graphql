@@ -42,32 +42,13 @@ defmodule Mix.Tasks.Gql.Gen do
       schema_singular: String.downcase(schema)
     ]
 
-    IO.inspect(binding, label: "binding")
-
     update_type(binding)
-    inject_context_import(binding)
-    create_resolver(binding)
+    update_resolver(binding)
+    update_schema(binding)
+    inject_schema_import(binding)
+    inject_root_fields(binding)
 
     Mix.shell().info("Generated GraphQL files for #{schema}!")
-  end
-
-  defp inject_context_import(binding) do
-    types_aggregator_path = "lib/#{binding[:app]}_web/graphql/types.ex"
-
-    if File.exists?(types_aggregator_path) do
-      content = File.read!(types_aggregator_path)
-      module_name = "#{binding[:web_mod]}.Graphql.#{binding[:context]}.Types"
-      import_line = "import_types #{module_name}"
-
-      if String.contains?(content, module_name) do
-        :ok
-      else
-        Mix.shell().info("Injecting context import into #{types_aggregator_path}...")
-        new_content = String.replace(content, ~r/end\s*$/, "\n#{import_line}\nend")
-        File.write!(types_aggregator_path, new_content)
-        Mix.Task.run("format", [types_aggregator_path])
-      end
-    end
   end
 
   defp update_type(binding) do
@@ -80,7 +61,7 @@ defmodule Mix.Tasks.Gql.Gen do
     if File.exists?(file_path) do
       Mix.shell().info("Updating #{file_path}...")
       content = File.read!(file_path)
-      updated_content = Regex.replace(~r/end\s*$/, content, "\n#{new_type_content}\nend")
+      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_type_content}\nend")
       File.write!(file_path, updated_content)
       Mix.Task.run("format", [file_path])
     else
@@ -91,7 +72,7 @@ defmodule Mix.Tasks.Gql.Gen do
     end
   end
 
-  defp create_resolver(binding) do
+  defp update_resolver(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
 
@@ -101,7 +82,7 @@ defmodule Mix.Tasks.Gql.Gen do
     if File.exists?(file_path) do
       Mix.shell().info("Updating #{file_path}...")
       content = File.read!(file_path)
-      updated_content = Regex.replace(~r/end\s*$/, content, "\n#{new_resolver_content}\nend")
+      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_resolver_content}\nend")
       File.write!(file_path, updated_content)
       Mix.Task.run("format", [file_path])
     else
@@ -109,6 +90,76 @@ defmodule Mix.Tasks.Gql.Gen do
       content = resolver_module_template(binding)
       full_content = String.replace(content, "# resolvers go here", new_resolver_content)
       Mix.Generator.create_file(file_path, full_content, format_elixir: true)
+    end
+  end
+
+  def update_schema(binding) do
+    dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
+    File.mkdir_p!(dir_path)
+
+    file_path = Path.join(dir_path, "schema.ex")
+    new_schema_content = schema_template(binding)
+
+    if File.exists?(file_path) do
+      Mix.shell().info("Updating #{file_path}...")
+      content = File.read!(file_path)
+      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_schema_content}\nend")
+      File.write!(file_path, updated_content)
+      Mix.Task.run("format", [file_path])
+    else
+      Mix.shell().info("Creating #{file_path}...")
+      content = schema_module_template(binding)
+      full_content = String.replace(content, "# schema go here", new_schema_content)
+      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
+    end
+  end
+
+  defp inject_schema_import(binding) do
+    types_aggregator_path = "lib/#{binding[:app]}_web/graphql/types.ex"
+
+    if File.exists?(types_aggregator_path) do
+      content = File.read!(types_aggregator_path)
+      module_name = "#{binding[:web_mod]}.Graphql.#{binding[:context]}.Schema"
+      import_line = "import_types #{module_name}"
+
+      if String.contains?(content, module_name) do
+        :ok
+      else
+        Mix.shell().info("Injecting schema import into #{types_aggregator_path}...")
+        new_content = String.replace(content, ~r/end\s*$/, "\n#{import_line}\nend")
+        File.write!(types_aggregator_path, new_content)
+        Mix.Task.run("format", [types_aggregator_path])
+      end
+    end
+  end
+
+  defp inject_root_fields(binding) do
+    root_schema_path = "lib/#{binding[:app]}_web/graphql/schema.ex"
+
+    if File.exists?(root_schema_path) do
+      content = File.read!(root_schema_path)
+
+      query_import = "import_fields :#{binding[:schema_singular]}_queries"
+      mutation_import = "import_fields :#{binding[:schema_singular]}_mutations"
+
+      new_content =
+        content
+        |> inject_into_block("query", query_import)
+        |> inject_into_block("mutation", mutation_import)
+
+      if new_content != content do
+        Mix.shell().info("Injecting fields into #{root_schema_path}...")
+        File.write!(root_schema_path, new_content)
+        Mix.Task.run("format", [root_schema_path])
+      end
+    end
+  end
+
+  defp inject_into_block(content, block_name, injection) do
+    if String.contains?(content, injection) do
+      content
+    else
+      String.replace(content, ~r/(#{block_name}\s+do)/, "\\1\n    #{injection}")
     end
   end
 
@@ -208,6 +259,55 @@ defmodule Mix.Tasks.Gql.Gen do
       def update_<%= @schema_singular %>(_parent, %{id: id} = args, _resolution) do
         <%= @schema_singular %> = <%= @context %>.get_<%= @schema_singular %>(id)
         <%= @context %>.update_<%= @schema_singular %>(<%= @schema_singular %>, args)
+      end
+    """,
+    [:assigns]
+  )
+
+  # Template for the Schema Module (created once)
+  EEx.function_from_string(
+    :defp,
+    :schema_module_template,
+    """
+    defmodule <%= @web_mod %>.Graphql.<%= @context %>.Schema do
+      use Absinthe.Schema.Notation
+      alias <%= @web_mod %>.Graphql.<%= @context %>.Resolvers
+
+      import_types <%= @web_mod %>.Graphql.<%= @context %>.Types
+
+      # schema go here
+    end
+    """,
+    [:assigns]
+  )
+
+  # Template for Schema Objects (Queries/Mutations)
+  EEx.function_from_string(
+    :defp,
+    :schema_template,
+    """
+      object :<%= @schema_singular %>_queries do
+        field :list_<%= @schema_plural %>, list_of(:<%= @schema_singular %>) do
+          resolve &Resolvers.list_<%= @schema_plural %>/3
+        end
+
+        field :get_<%= @schema_singular %>, :<%= @schema_singular %> do
+          arg :id, non_null(:id)
+          resolve &Resolvers.get_<%= @schema_singular %>/3
+        end
+      end
+
+      object :<%= @schema_singular %>_mutations do
+        field :create_<%= @schema_singular %>, :<%= @schema_singular %> do
+          arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
+          resolve &Resolvers.create_<%= @schema_singular %>/3
+        end
+
+        field :update_<%= @schema_singular %>, :<%= @schema_singular %> do
+          arg :id, non_null(:id)
+          arg :<%= @schema_singular %>_params, non_null(:<%= @schema_singular %>_params)
+          resolve &Resolvers.update_<%= @schema_singular %>/3
+        end
       end
     """,
     [:assigns]
