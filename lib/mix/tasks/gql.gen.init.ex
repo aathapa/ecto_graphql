@@ -148,7 +148,7 @@ defmodule Mix.Tasks.Gql.Gen.Init do
     defmodule <%= @web_mod %>.Graphql.Schema do
       use Absinthe.Schema
 
-      import_types <%= @web_mod %>.Graphql.Type
+      import_types <%= @web_mod %>.Graphql.Types
 
       @spec context(map()) :: map()
       def context(ctx) do
