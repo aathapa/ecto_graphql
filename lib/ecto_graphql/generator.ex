@@ -1,34 +1,4 @@
 defmodule EctoGraphql.Generator do
-  @type_module :ecto_graphql
-               |> :code.priv_dir()
-               |> Path.join("templates/types/module.eex")
-               |> File.read!()
-
-  @type_block :ecto_graphql
-              |> :code.priv_dir()
-              |> Path.join("templates/types/block.eex")
-              |> File.read!()
-
-  @schema_module :ecto_graphql
-                 |> :code.priv_dir()
-                 |> Path.join("templates/schema/module.eex")
-                 |> File.read!()
-
-  @schema_block :ecto_graphql
-                |> :code.priv_dir()
-                |> Path.join("templates/schema/block.eex")
-                |> File.read!()
-
-  @resolver_module :ecto_graphql
-                   |> :code.priv_dir()
-                   |> Path.join("templates/resolvers/module.eex")
-                   |> File.read!()
-
-  @resolver_block :ecto_graphql
-                  |> :code.priv_dir()
-                  |> Path.join("templates/resolvers/block.eex")
-                  |> File.read!()
-
   def generate(graphql_type, file_path, bindings) do
     new_content = eex_content(graphql_type, bindings, :block)
 
@@ -52,12 +22,19 @@ defmodule EctoGraphql.Generator do
     |> EEx.eval_string(assigns: bindings)
   end
 
-  defp get_template(:type, :block), do: @type_block
-  defp get_template(:type, :module), do: @type_module
-  defp get_template(:schema, :block), do: @schema_block
-  defp get_template(:schema, :module), do: @schema_module
-  defp get_template(:resolver, :block), do: @resolver_block
-  defp get_template(:resolver, :module), do: @resolver_module
+  defp get_template(:type, :block), do: read_template("templates/types/block.eex")
+  defp get_template(:type, :module), do: read_template("templates/types/module.eex")
+  defp get_template(:schema, :block), do: read_template("templates/schema/block.eex")
+  defp get_template(:schema, :module), do: read_template("templates/schema/module.eex")
+  defp get_template(:resolver, :block), do: read_template("templates/resolvers/block.eex")
+  defp get_template(:resolver, :module), do: read_template("templates/resolvers/module.eex")
+
+  defp read_template(path) do
+    :ecto_graphql
+    |> :code.priv_dir()
+    |> Path.join(path)
+    |> File.read!()
+  end
 
   def inject_before_final_end(content, new_content) do
     String.replace(content, ~r/end\s*$/, "\n#{new_content}\nend")
