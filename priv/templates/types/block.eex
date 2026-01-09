@@ -1,5 +1,4 @@
   object :<%= @schema_singular %> do
-    field :id, :id
     <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
     <% end %>  end
 
