@@ -1,21 +1,81 @@
 defmodule Mix.Tasks.Gql.Gen do
-  @shortdoc "Generates an Absinthe GraphQL schema, type, and resolver for a resource"
+  @shortdoc "Generates Absinthe GraphQL schema, types, and resolvers"
 
   @moduledoc """
-  Generates an Absinthe GraphQL schema, type, and resolver for a resource.
+  Generates Absinthe GraphQL schema, types, and resolvers for a resource.
 
-      $ mix gql.gen Accounts user name:string age:integer
+  ## Usage Patterns
+
+  ### 1. Generate from Ecto Schema File (Recommended)
+
       $ mix gql.gen Accounts lib/my_app/accounts/user.ex
 
-  The first argument is the context name (e.g. `Accounts`).
-  The second argument is the schema name (e.g. `user`) OR a path to an Ecto schema file.
+  This automatically:
+  - Loads the Ecto schema module
+  - Extracts the table name (e.g., "users" → "user")
+  - Reads all field definitions and types
+  - Generates GraphQL types, schema, and resolvers
 
-  If a file path is provided:
-  - The schema name is inferred from the table name (source) of the Ecto schema.
-  - The fields are extracted from the Ecto schema definitions.
+  ### 2. Generate from Ecto Schema with Custom Name
 
-  You can also explicitly provide the schema name with a file path:
-      $ mix gql.gen Accounts User lib/my_app/accounts/user.ex
+      $ mix gql.gen Accounts CustomUser lib/my_app/accounts/user.ex
+
+  Use this when you want a different GraphQL schema name than the inferred one.
+
+  ### 3. Manual Field Definition
+
+      $ mix gql.gen Accounts User name:string email:string age:integer
+
+  Manually specify fields when you don't have an Ecto schema.
+
+  ## Generated Files
+
+  For context `Accounts` and schema `User`, generates:
+
+  - `lib/my_app_web/graphql/accounts/type.ex` - Object and input types
+  - `lib/my_app_web/graphql/accounts/schema.ex` - Query and mutation definitions
+  - `lib/my_app_web/graphql/accounts/resolvers.ex` - Resolver stubs
+
+  ## Automatic Integration
+
+  If the following files exist, the generator automatically adds imports:
+
+  - `lib/my_app_web/graphql/types.ex` - Adds `import_types` statement
+  - `lib/my_app_web/graphql/schema.ex` - Adds `import_fields` statements
+
+  ## Field Type Syntax
+
+  When manually defining fields, use the format `field_name:type`:
+
+  - `name:string` - String field
+  - `age:integer` - Integer field
+  - `price:decimal` - Decimal field
+  - `active:boolean` - Boolean field
+  - `published_at:utc_datetime` - DateTime field
+
+  Omit the type to default to `:string`:
+
+      $ mix gql.gen Blog Post title body:string
+
+  This creates `title:string` and `body:string`.
+
+  ## Examples
+
+      # Generate from existing Ecto schema
+      $ mix gql.gen Blog lib/my_app/blog/post.ex
+
+      # Generate with custom name
+      $ mix gql.gen Shop Product lib/my_app/catalog/item.ex
+
+      # Generate manually for a simple type
+      $ mix gql.gen Config Setting key:string value:string
+
+  ## Notes
+
+  - Generated files use proper indentation and are auto-formatted
+  - Resolver functions are stubs - implement your business logic
+  - Running the task multiple times appends new definitions to existing files
+  - Schema names are singularized from table names (e.g., "users" → "user")
   """
 
   use Mix.Task

@@ -1,4 +1,27 @@
 defmodule EctoGraphql.Generator do
+  @moduledoc """
+  Template-based code generator for GraphQL schemas, types, and resolvers.
+
+  Uses EEx templates from `priv/templates/` loaded at runtime.
+
+  ## Template Types
+
+  - `:type` - GraphQL object and input_object definitions
+  - `:schema` - Query and mutation field definitions
+  - `:resolver` - Resolver function stubs
+
+  Each has `module.eex` (wrapper) and `block.eex` (content) templates.
+  """
+
+  @doc """
+  Generates or updates a GraphQL file.
+
+  ## Parameters
+
+  - `graphql_type` - `:type`, `:schema`, or `:resolver`
+  - `file_path` - Target file path
+  - `bindings` - Template variables (app, context, schema, fields, etc.)
+  """
   def generate(graphql_type, file_path, bindings) do
     new_content = eex_content(graphql_type, bindings, :block)
 

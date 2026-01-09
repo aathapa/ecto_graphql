@@ -1,10 +1,23 @@
 defmodule EctoGraphql.SchemaLoader do
   @moduledoc """
-  Loads an Ecto schema from a file and extracts its fields and types.
+  Loads Ecto schema files and extracts field information using reflection.
+
+  Uses `Code.compile_file/1` to load modules and `__schema__/1,2` callbacks
+  to extract table names and field types.
+
+  ## Example
+
+      iex> EctoGraphql.SchemaLoader.load("lib/my_app/accounts/user.ex")
+      {:ok, %{
+        module: MyApp.Accounts.User,
+        source: "users",
+        fields: [{:id, :id}, {:email, :string}, {:age, :integer}]
+      }}
+
   """
 
   @doc """
-  Loads the schema from the given file path and returns the list of fields.
+  Loads schema from a file path.
 
   Returns `{:ok, %{module: module, source: source, fields: fields}}` or `{:error, reason}`.
   """
