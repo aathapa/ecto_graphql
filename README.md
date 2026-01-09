@@ -9,7 +9,7 @@ Add `ecto_graphql` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto_graphql, "~> 0.1.1"}
+    {:ecto_graphql, "~> 0.2.0"}
   ]
 end
 ```
