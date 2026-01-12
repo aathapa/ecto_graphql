@@ -10,12 +10,16 @@ defmodule ExampleWeb.Graphql.Schema do
   end
 
   query do
+    import_fields(:user_queries)
+
     field :get, :string do
       resolve(fn _, _, _ -> {:ok, "user"} end)
     end
   end
 
   mutation do
+    import_fields(:user_mutations)
+
     field :create, :string do
       resolve(fn _, _, _ -> {:ok, "user"} end)
     end
