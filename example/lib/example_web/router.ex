@@ -41,4 +41,14 @@ defmodule ExampleWeb.Router do
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
+
+  scope "/" do
+    pipe_through :api
+
+    forward "/graphiql", Absinthe.Plug.GraphiQL,
+      schema: ExampleWeb.Graphql.Schema,
+      interface: :playground
+
+    forward "/graphql", Absinthe.Plug, schema: ExampleWeb.Graphql.Schema
+  end
 end
