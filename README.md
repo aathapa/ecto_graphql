@@ -1,10 +1,25 @@
 # EctoGraphql
 
-Generate Absinthe GraphQL schemas, types, and resolvers from your Ecto schemas.
+[![Hex Version](https://img.shields.io/hexpm/v/ecto_graphql.svg)](https://hex.pm/packages/ecto_graphql)
+[![Hex Docs](https://img.shields.io/badge/hexdocs-lightgreen.svg)](https://hexdocs.pm/ecto_graphql)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+`ecto_graphql` is a **GraphQL code generator for Elixir** that transforms your **Ecto schemas into Absinthe GraphQL APIs** automatically.
+
+It generates:
+
+* GraphQL **object and input types** from Ecto schemas
+* **Query and mutation** definitions
+* **Resolver stubs** ready for your business logic
+* Automatic **integration** with your root schema
+
+The goal is to eliminate repetitive boilerplate while keeping your GraphQL layer thin and maintainable.
+
+
 
 ## Installation
 
-Add `ecto_graphql` to your dependencies in `mix.exs`:
+Add the dependency to your `mix.exs`:
 
 ```elixir
 def deps do
@@ -14,31 +29,50 @@ def deps do
 end
 ```
 
-## Quick Start
-
-Generate GraphQL from an existing Ecto schema:
+Then run:
 
 ```bash
-mix gql.gen Accounts lib/my_app/accounts/user.ex
+mix deps.get
 ```
 
-This automatically extracts fields from your Ecto schema and generates:
+---
 
-- Type definitions (`type.ex`)
-- Schema with queries and mutations (`schema.ex`)
-- Resolver stubs (`resolvers.ex`)
+## What Gets Generated
 
-## Usage
+Using a single Mix task, EctoGraphql generates:
+
+* **GraphQL types** — object types and input types for mutations
+* **Queries** — list all and get by ID
+* **Mutations** — create, update, and delete operations
+* **Resolvers** — function stubs for you to implement business logic
+* **Automatic imports** — seamless integration into your root schema
+
+All generated code is **plain Elixir** that you can modify, extend, or refactor as needed.
+
+---
+
+## Mix Task
 
 ### From Ecto Schema (Recommended)
 
 ```bash
-# Infer schema name from table
-mix gql.gen Blog lib/my_app/blog/post.ex
-
-# Override schema name
-mix gql.gen Blog Article lib/my_app/blog/post.ex
+mix gql.gen Accounts lib/example/accounts/user.ex
 ```
+
+This reads the Ecto schema file and automatically:
+
+1. Extracts all schema fields
+2. Maps Ecto types to GraphQL types
+3. Generates type definitions, queries, mutations, and resolvers
+4. Integrates generated modules into your root schema
+
+### Override Schema Name
+
+```bash
+mix gql.gen Accounts Person lib/example/accounts/user.ex
+```
+
+Use this when your GraphQL schema name should differ from the Ecto table name.
 
 ### Manual Field Definition
 
@@ -46,78 +80,183 @@ mix gql.gen Blog Article lib/my_app/blog/post.ex
 mix gql.gen Accounts User name:string email:string age:integer
 ```
 
-## Generated Files
+For quick prototyping or when you don't have an Ecto schema yet.
 
-For context `Accounts` and schema `User`:
+---
+
+## Generated File Structure
+
+For context `Accounts` and schema `User`, the generator creates:
 
 ```
-lib/my_app_web/graphql/accounts/
+lib/example_web/graphql/accounts/
 ├── type.ex       # GraphQL object and input types
 ├── schema.ex     # Query and mutation definitions
 └── resolvers.ex  # Resolver function stubs
 ```
 
-## Type Mapping
+Existing files are updated intelligently without overwriting your custom code.
 
-Ecto types are automatically mapped to GraphQL types:
+---
 
-| Ecto            | GraphQL     |
-| --------------- | ----------- |
-| `:binary_id`    | `:id`       |
-| `:string`       | `:string`   |
-| `:integer`      | `:integer`  |
-| `:boolean`      | `:boolean`  |
-| `:utc_datetime` | `:datetime` |
-| `:map`          | `:json`     |
-
-See [documentation](https://hexdocs.pm/ecto_graphql) for complete mapping.
-
-## Integration
-
-The generator automatically integrates with your existing GraphQL schema by adding imports to:
-
-- `lib/my_app_web/graphql/types.ex`
-- `lib/my_app_web/graphql/schema.ex`
-
-If these files don't exist, you'll need to manually import the generated modules.
-
-## Example
-
-Given this Ecto schema:
+## Example Ecto Schema
 
 ```elixir
-defmodule MyApp.Blog.Post do
+defmodule Example.Accounts.User do
   use Ecto.Schema
+  import Ecto.Changeset
 
-  schema "posts" do
-    field :title, :string
-    field :body, :string
-    field :published_at, :utc_datetime
-    timestamps()
+  schema "users" do
+    field :name, :string
+    field :email, :string
+
+    timestamps(type: :utc_datetime)
+  end
+
+  @doc false
+  def changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name, :email])
+    |> validate_required([:name, :email])
   end
 end
 ```
 
-Run:
+---
 
-```bash
-mix gql.gen Blog lib/my_app/blog/post.ex
+## Generated GraphQL Types
+
+```elixir
+object :user do
+  field(:id, :id)
+  field(:name, :string)
+  field(:email, :string)
+  field(:inserted_at, :datetime)
+  field(:updated_at, :datetime)
+end
+
+input_object :user_params do
+  field(:id, :id)
+  field(:name, :string)
+  field(:email, :string)
+  field(:inserted_at, :datetime)
+  field(:updated_at, :datetime)
+end
 ```
 
-Generates GraphQL types for a `post` schema with all fields automatically extracted.
+---
+
+## Generated Resolvers
+
+Resolver stubs are created for you to implement your business logic:
+
+```elixir
+def list_users(_parent, _args, _resolution) do
+  {:ok, Accounts.list_users()}
+end
+
+def get_user(_parent, %{id: id}, _resolution) do
+  Accounts.get_user!(id)
+end
+
+def create_user(_parent, args, _resolution) do
+  Accounts.create_user(args)
+end
+
+def update_user(_parent, %{id: id} = args, _resolution) do
+  user = Accounts.get_user!(id)
+  Accounts.update_user(user, args)
+end
+```
+
+This preserves the separation between your GraphQL layer and business logic.
+
+---
+
+## Automatic Schema Integration
+
+Generated modules are automatically imported into your root schema:
+
+**lib/example_web/graphql/types.ex**:
+```elixir
+defmodule ExampleWeb.Graphql.Types do
+  use Absinthe.Schema.Notation
+
+  # Import generated types here
+  import_types(ExampleWeb.Graphql.Accounts.Schema)
+end
+```
+
+**lib/example_web/graphql/schema.ex**:
+```elixir
+defmodule ExampleWeb.Graphql.Schema do
+  use Absinthe.Schema
+
+  import_types(Absinthe.Type.Custom)
+  import_types(ExampleWeb.Graphql.Types)
+
+  query do
+    import_fields(:user_queries)
+  end
+
+  mutation do
+    import_fields(:user_mutations)
+  end
+end
+```
+
+No manual wiring required. If these files don't exist, they'll be created for you.
+
+---
+
+## Type Mapping
+
+Ecto types are intelligently mapped to GraphQL types:
+
+| Ecto Type       | GraphQL Type |
+| --------------- | ------------ |
+| `:binary_id`    | `:id`        |
+| `:string`       | `:string`    |
+| `:integer`      | `:integer`   |
+| `:boolean`      | `:boolean`   |
+| `:utc_datetime` | `:datetime`  |
+| `:map`          | `:json`      |
+
+See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type mapping reference.
+
+---
 
 ## Features
 
-- ✅ Automatic field extraction from Ecto schemas
-- ✅ Smart type mapping (Ecto → GraphQL)
-- ✅ Table name singularization (`users` → `user`)
-- ✅ Auto-integration with existing schemas
-- ✅ Customizable EEx templates
-- ✅ Updates existing files without overwriting
+- ✅ **Automatic field extraction** from Ecto schemas
+- ✅ **Smart type mapping** (Ecto → GraphQL)
+- ✅ **Table name singularization** (`users` → `user`)
+- ✅ **Auto-integration** with existing schemas
+- ✅ **Customizable EEx templates** in `priv/templates`
+- ✅ **Incremental updates** — doesn't overwrite existing files
+- ✅ **Phoenix-friendly** structure and conventions
+
+---
+
+## Philosophy
+
+EctoGraphql follows these principles:
+
+* **Generated code is yours** — modify, extend, or refactor as needed
+* **No runtime magic** — plain Absinthe code you can read and understand
+* **Explicit over clever** — predictable generation, no surprises
+* **Single source of truth** — Ecto schemas drive your GraphQL API
+
+If the generated code is hard to read or modify, it doesn't belong here.
+
+
 
 ## Documentation
 
-- [Hex Docs](https://hexdocs.pm/ecto_graphql)
+Full documentation is available on HexDocs:  
+[https://hexdocs.pm/ecto_graphql](https://hexdocs.pm/ecto_graphql)
+
+---
 
 ## License
 
