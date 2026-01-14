@@ -1,6 +1,6 @@
 defmodule EctoGraphql do
   @moduledoc """
-  Generates Absinthe GraphQL schemas, types, and resolvers from Ecto schemas.
+  Derives Absinthe GraphQL schemas, types, and resolvers from Ecto schemas.
 
   ## Usage
 

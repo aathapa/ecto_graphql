@@ -4,18 +4,16 @@
 [![Hex Docs](https://img.shields.io/badge/hexdocs-lightgreen.svg)](https://hexdocs.pm/ecto_graphql)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-`ecto_graphql` is a **GraphQL code generator for Elixir** that transforms your **Ecto schemas into Absinthe GraphQL APIs** automatically.
+`ecto_graphql` is a **library for deriving Absinthe GraphQL APIs from Ecto schemas**.
 
-It generates:
+It derives:
 
 * GraphQL **object and input types** from Ecto schemas
 * **Query and mutation** definitions
 * **Resolver stubs** ready for your business logic
 * Automatic **integration** with your root schema
 
-The goal is to eliminate repetitive boilerplate while keeping your GraphQL layer thin and maintainable.
-
-
+The goal is to eliminate repetitive boilerplate by deriving your GraphQL API directly from your Ecto schemas.
 
 ## Installation
 
@@ -35,8 +33,6 @@ Then run:
 mix deps.get
 ```
 
----
-
 ## What Gets Generated
 
 Using a single Mix task, EctoGraphql generates:
@@ -48,8 +44,6 @@ Using a single Mix task, EctoGraphql generates:
 * **Automatic imports** — seamless integration into your root schema
 
 All generated code is **plain Elixir** that you can modify, extend, or refactor as needed.
-
----
 
 ## Mix Task
 
@@ -82,7 +76,6 @@ mix gql.gen Accounts User name:string email:string age:integer
 
 For quick prototyping or when you don't have an Ecto schema yet.
 
----
 
 ## Generated File Structure
 
@@ -96,8 +89,6 @@ lib/example_web/graphql/accounts/
 ```
 
 Existing files are updated intelligently without overwriting your custom code.
-
----
 
 ## Example Ecto Schema
 
@@ -122,8 +113,6 @@ defmodule Example.Accounts.User do
 end
 ```
 
----
-
 ## Generated GraphQL Types
 
 ```elixir
@@ -143,8 +132,6 @@ input_object :user_params do
   field(:updated_at, :datetime)
 end
 ```
-
----
 
 ## Generated Resolvers
 
@@ -170,8 +157,6 @@ end
 ```
 
 This preserves the separation between your GraphQL layer and business logic.
-
----
 
 ## Automatic Schema Integration
 
@@ -207,8 +192,6 @@ end
 
 No manual wiring required. If these files don't exist, they'll be created for you.
 
----
-
 ## Type Mapping
 
 Ecto types are intelligently mapped to GraphQL types:
@@ -224,8 +207,6 @@ Ecto types are intelligently mapped to GraphQL types:
 
 See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type mapping reference.
 
----
-
 ## Features
 
 - ✅ **Automatic field extraction** from Ecto schemas
@@ -235,8 +216,6 @@ See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type 
 - ✅ **Customizable EEx templates** in `priv/templates`
 - ✅ **Incremental updates** — doesn't overwrite existing files
 - ✅ **Phoenix-friendly** structure and conventions
-
----
 
 ## Philosophy
 
@@ -255,8 +234,6 @@ If the generated code is hard to read or modify, it doesn't belong here.
 
 Full documentation is available on HexDocs:  
 [https://hexdocs.pm/ecto_graphql](https://hexdocs.pm/ecto_graphql)
-
----
 
 ## License
 

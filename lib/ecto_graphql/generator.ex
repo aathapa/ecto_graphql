@@ -2,25 +2,94 @@ defmodule EctoGraphql.Generator do
   @moduledoc """
   Template-based code generator for GraphQL schemas, types, and resolvers.
 
-  Uses EEx templates from `priv/templates/` loaded at runtime.
+  The Generator module reads EEx templates from `priv/templates/` and generates
+  complete GraphQL files. It handles both creating new files and updating existing
+  files without overwriting custom code.
 
-  ## Template Types
+  ## Template Structure
 
-  - `:type` - GraphQL object and input_object definitions
-  - `:schema` - Query and mutation field definitions
-  - `:resolver` - Resolver function stubs
+  Templates are organized by GraphQL component type:
 
-  Each has `module.eex` (wrapper) and `block.eex` (content) templates.
+      priv/templates/
+      ├── types/
+      │   ├── module.eex   # Module wrapper for types
+      │   └── block.eex    # Type definitions to inject
+      ├── schema/
+      │   ├── module.eex   # Module wrapper for schema
+      │   └── block.eex    # Query/mutation definitions
+      └── resolvers/
+          ├── module.eex   # Module wrapper for resolvers
+          └── block.eex    # Resolver functions
+
+  ## Available Template Variables
+
+  All templates have access to these assigns:
+
+    * `@app` - Application name atom (e.g., `:my_app`)
+    * `@base` - Base module name string (e.g., `"MyApp"`)
+    * `@web_mod` - Web module name string (e.g., `"MyAppWeb"`)
+    * `@context` - Context name string (e.g., `"Accounts"`)
+    * `@context_slug` - Lowercase context (e.g., `"accounts"`)
+    * `@schema` - Schema name string (e.g., `"User"`)
+    * `@schema_singular` - Lowercase singular (e.g., `"user"`)
+    * `@schema_plural` - Lowercase plural (e.g., `"users"`)
+    * `@fields` - List of `{field_name, field_type}` tuples
+
+  ## Example Usage
+
+      # Generate types file
+      Generator.generate(
+        :type,
+        "lib/my_app_web/graphql/accounts/type.ex",
+        [
+          app: :my_app,
+          context: "Accounts",
+          schema: "User",
+          fields: [{:id, :id}, {:name, :string}, {:email, :string}]
+        ]
+      )
+
+  ## Customizing Templates
+
+  You can customize the generated code by modifying the EEx templates in
+  `priv/templates/`. For example, to add authorization to all resolvers,
+  edit `priv/templates/resolvers/block.eex`:
+
+      def list_<%= @schema_plural %>(_parent, _args, %{context: %{current_user: user}}) do
+        if authorized?(user, :list, <%= @schema %>) do
+          {:ok, <%= @context %>.list_<%= @schema_plural %>()}
+        else
+          {:error, "Unauthorized"}
+        end
+      end
   """
 
   @doc """
-  Generates or updates a GraphQL file.
+  Generates or updates a GraphQL file from templates.
+
+  Creates a new file if it doesn't exist, or appends new content to an existing
+  file without overwriting custom code.
 
   ## Parameters
 
-  - `graphql_type` - `:type`, `:schema`, or `:resolver`
-  - `file_path` - Target file path
-  - `bindings` - Template variables (app, context, schema, fields, etc.)
+    * `graphql_type` - The type of GraphQL file: `:type`, `:schema`, or `:resolver`
+    * `file_path` - Target file path (absolute or relative to project root)
+    * `bindings` - Keyword list of template variables
+
+  ## Examples
+
+      # Create a new types file
+      Generator.generate(:type, "lib/my_app_web/graphql/accounts/type.ex", bindings)
+
+      # Update an existing schema file
+      Generator.generate(:schema, "lib/my_app_web/graphql/accounts/schema.ex", bindings)
+
+  ## Behavior
+
+  - If the file doesn't exist, generates a complete module using `module.eex`
+  - If the file exists, appends new definitions using `block.eex`
+  - Automatically runs `mix format` on the generated file
+  - Never overwrites custom code you've added
   """
   def generate(graphql_type, file_path, bindings) do
     new_content = eex_content(graphql_type, bindings, :block)
