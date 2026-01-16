@@ -17,7 +17,7 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          VERSION=$(grep 'version:' mix.exs | cut -d '"' -f2)
+          VERSION=$(grep '@version "' mix.exs | cut -d '"' -f2)
           echo "::set-output name=tag::v$VERSION"
           echo "Found version: v$VERSION"
 
