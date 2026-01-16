@@ -93,24 +93,176 @@ Existing files are updated intelligently without overwriting your custom code.
 ## Example Ecto Schema
 
 ```elixir
-defmodule Example.Accounts.User do
+defmodule MyApp.Accounts.User do
   use Ecto.Schema
-  import Ecto.Changeset
 
   schema "users" do
     field :name, :string
     field :email, :string
+    field :password_hash, :string
 
     timestamps(type: :utc_datetime)
   end
+end
+```
 
-  @doc false
-  def changeset(user, attrs) do
-    user
-    |> cast(attrs, [:name, :email])
-    |> validate_required([:name, :email])
+## Runtime Macros
+
+EctoGraphql provides two powerful macros for defining GraphQL types at compile-time from your Ecto schemas:
+
+- **`gql_object`** - Creates complete object definitions
+- **`gql_fields`** - Generates field definitions within existing objects
+
+### Quick Start
+
+```elixir
+defmodule MyAppWeb.Schema.Types do
+  use Absinthe.Schema.Notation
+  use EctoGraphql
+
+  # Complete object definition
+  gql_object(:user, MyApp.Accounts.User)
+
+  # Or use gql_fields within an object
+  object :product do
+    gql_fields(MyApp.Catalog.Product)
   end
 end
+```
+
+### `gql_object` - Complete Object Definitions
+
+Use `gql_object` to quickly create a complete GraphQL object from an Ecto schema.
+
+#### Basic Usage
+
+```elixir
+# Generate all fields
+gql_object(:user, MyApp.Accounts.User)
+```
+
+#### Field Filtering
+
+```elixir
+# Include only specific fields
+gql_object(:user_public, MyApp.Accounts.User, only: [:id, :name, :email])
+
+# Exclude sensitive fields
+gql_object(:user, MyApp.Accounts.User, except: [:password_hash, :recovery_token])
+```
+
+#### Custom Fields
+
+Add or override fields using a `do` block:
+
+```elixir
+gql_object :user, MyApp.Accounts.User do
+  # Add a custom field
+  field :full_name, :string do
+    resolve fn user, _, _ ->
+      {:ok, "#{user.first_name} #{user.last_name}"}
+    end
+  end
+  
+  # Override an auto-generated field
+  field :email, :string do
+    resolve fn user, _, _ ->
+      if user.email_public, do: {:ok, user.email}, else: {:ok, "[hidden]"}
+    end
+  end
+end
+```
+
+#### Combining Options and Custom Fields
+
+```elixir
+gql_object :user, MyApp.Accounts.User, except: [:inserted_at, :updated_at] do
+  field :member_since, :string do
+    resolve fn user, _, _ ->
+      days = DateTime.diff(DateTime.utc_now(), user.inserted_at, :day)
+      {:ok, "#{days} days"}
+    end
+  end
+end
+```
+
+### `gql_fields` - Field Generation
+
+Use `gql_fields` when you need fine-grained control over your object structure.
+
+#### Basic Usage
+
+```elixir
+object :user do
+  gql_fields(MyApp.Accounts.User)
+end
+```
+
+#### Mixing with Custom Fields
+
+```elixir
+object :user do
+  gql_fields(MyApp.Accounts.User, except: [:password_hash])
+  
+  # Add custom fields
+  field :avatar_url, :string do
+    resolve fn user, _, _ ->
+      {:ok, "https://cdn.example.com/avatars/#{user.id}.jpg"}
+    end
+  end
+  
+  field :is_admin, :boolean do
+    resolve fn user, _, _ ->
+      {:ok, user.role == :admin}
+    end
+  end
+end
+```
+
+#### Multiple Schemas in One Object
+
+```elixir
+object :user_profile do
+  gql_fields(MyApp.Accounts.User, only: [:id, :name, :email])
+  gql_fields(MyApp.Accounts.Profile, except: [:user_id, :id])
+  
+  # Add computed fields
+  field :display_name, :string
+end
+```
+
+#### When to Use Each Macro
+
+**Use `gql_object` when:**
+- You want a quick, complete object definition
+- Most fields map directly from your Ecto schema
+- You only need to add a few custom fields
+
+**Use `gql_fields` when:**
+- You need precise control over field ordering
+- You're combining fields from multiple schemas
+- You want to mix auto-generated and custom fields explicitly
+- You're building complex object structures
+
+## Mix Tasks
+
+Generate GraphQL schemas, types, and resolvers from Ecto schemas using Mix tasks:
+
+### Generate from Ecto Schema
+
+```bash
+mix gql.gen Accounts lib/my_app/accounts/user.ex
+```
+
+This generates:
+- `lib/my_app_web/graphql/accounts/types.ex` - Object and input_object types
+- `lib/my_app_web/graphql/accounts/schema.ex` - Query and mutation definitions  
+- `lib/my_app_web/graphql/accounts/resolvers.ex` - Resolver function stubs
+
+### Initialize
+
+```bash
+mix gql.gen.init
 ```
 
 ## Generated GraphQL Types
