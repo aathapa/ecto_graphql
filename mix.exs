@@ -55,7 +55,8 @@ defmodule EctoGraphql.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
-      {:ecto_sql, "~> 3.10"}
+      {:ecto, "~> 3.10"},
+      {:absinthe, "~> 1.9"}
     ]
   end
 
@@ -67,7 +68,8 @@ defmodule EctoGraphql.MixProject do
     [
       name: "ecto_graphql",
       licenses: ["MIT"],
-      links: %{"GitHub" => @github_url}
+      links: %{"GitHub" => @github_url},
+      files: ~w(.formatter.exs mix.exs README.md lib)
     ]
   end
 end
