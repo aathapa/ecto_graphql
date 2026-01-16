@@ -1,6 +1,10 @@
 defmodule EctoGraphql.GqlObject do
   @moduledoc """
-  Provides the `gql_object/2-4` macro for generating complete Absinthe object definitions from Ecto schemas.
+  Provides macros for generating Absinthe object and input object definitions from Ecto schemas.
+
+  This module provides:
+  * `gql_object/2-4` - Generates a complete GraphQL `object` block
+  * `gql_input_object/2-4` - Generates a complete GraphQL `input_object` block
 
   The `gql_object` macro creates a complete GraphQL `object` block with all fields
   automatically derived from an Ecto schema. This is the recommended approach for
@@ -96,6 +100,22 @@ defmodule EctoGraphql.GqlObject do
 
   @type object_opts :: [only: [atom()]] | [except: [atom()]] | []
 
+  @doc "See `gql_object/4`."
+  @spec gql_object(atom(), module()) :: Macro.t()
+  defmacro gql_object(name, schema_module) do
+    generate_object(name, schema_module, [], nil)
+  end
+
+  @doc "See `gql_object/4`."
+  @spec gql_object(atom(), module(), object_opts() | Macro.t()) :: Macro.t()
+  defmacro gql_object(name, schema_module, do: block) do
+    generate_object(name, schema_module, [], block)
+  end
+
+  defmacro gql_object(name, schema_module, opts) do
+    generate_object(name, schema_module, opts, nil)
+  end
+
   @doc """
   Generates a complete Absinthe object definition from an Ecto schema.
 
@@ -155,23 +175,61 @@ defmodule EctoGraphql.GqlObject do
       end
 
   """
-  @spec gql_object(atom(), module()) :: Macro.t()
-  defmacro gql_object(name, schema_module) do
-    generate_object(name, schema_module, [], nil)
-  end
-
-  @spec gql_object(atom(), module(), object_opts() | Macro.t()) :: Macro.t()
-  defmacro gql_object(name, schema_module, do: block) do
-    generate_object(name, schema_module, [], block)
-  end
-
-  defmacro gql_object(name, schema_module, opts) do
-    generate_object(name, schema_module, opts, nil)
-  end
-
   @spec gql_object(atom(), module(), object_opts(), Macro.t()) :: Macro.t()
   defmacro gql_object(name, schema_module, opts, do: block) do
     generate_object(name, schema_module, opts, block)
+  end
+
+  @doc "See `gql_input_object/4`."
+  @spec gql_input_object(atom(), module()) :: Macro.t()
+  defmacro gql_input_object(name, schema_module) do
+    generate_input_object(name, schema_module, [], nil)
+  end
+
+  @doc "See `gql_input_object/4`."
+  @spec gql_input_object(atom(), module(), object_opts() | Macro.t()) :: Macro.t()
+  defmacro gql_input_object(name, schema_module, do: block) do
+    generate_input_object(name, schema_module, [], block)
+  end
+
+  defmacro gql_input_object(name, schema_module, opts) do
+    generate_input_object(name, schema_module, opts, nil)
+  end
+
+  @doc """
+  Generates a complete Absinthe input object definition from an Ecto schema.
+
+  The usage is identical to `gql_object/2-4`, but generates an `input_object` instead.
+
+  ## Examples
+
+      # Basic usage - all fields
+      gql_input_object(:user_input, MyApp.Accounts.User)
+
+      # With filtering
+      gql_input_object(:user_input, MyApp.Accounts.User, only: [:name, :email])
+      gql_input_object(:user_input, MyApp.Accounts.User, except: [:id, :inserted_at])
+
+      # With custom fields
+      gql_input_object :user_input, MyApp.Accounts.User do
+        field :password_confirmation, :string
+      end
+  """
+  @spec gql_input_object(atom(), module(), object_opts(), Macro.t()) :: Macro.t()
+  defmacro gql_input_object(name, schema_module, opts, do: block) do
+    generate_input_object(name, schema_module, opts, block)
+  end
+
+  defp generate_input_object(name, schema_module, opts, do_block) do
+    overridden_fields = if do_block, do: extract_field_names(do_block), else: []
+    filtered_opts = filter_overridden_fields(overridden_fields, opts)
+
+    quote do
+      input_object(unquote(name)) do
+        EctoGraphql.GqlFields.gql_fields(unquote(schema_module), unquote(filtered_opts))
+        unquote(do_block)
+      end
+    end
   end
 
   defp generate_object(name, schema_module, opts, do_block) do

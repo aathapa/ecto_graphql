@@ -143,4 +143,121 @@ defmodule EctoGraphql.GqlObjectTest do
       assert length(name_field.middleware) > 0
     end
   end
+
+  #
+  # Input Object Tests
+  #
+
+  defmodule BasicInputSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    gql_input_object(:user_input, EctoGraphql.GqlObjectTest.TestUser)
+  end
+
+  defmodule FilteredInputSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    gql_input_object(:user_input, EctoGraphql.GqlObjectTest.TestUser, except: [:password_hash])
+  end
+
+  defmodule CustomFieldInputSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    gql_input_object :user_input, EctoGraphql.GqlObjectTest.TestUser do
+      field(:password_confirmation, :string)
+    end
+  end
+
+  defmodule OverrideFieldInputSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    gql_input_object :user_input, EctoGraphql.GqlObjectTest.TestUser, except: [:age] do
+      # Override the name field
+      field(:name, :string)
+    end
+  end
+
+  describe "gql_input_object/2 basic usage" do
+    test "generates input object with all fields" do
+      user_input = Absinthe.Schema.lookup_type(BasicInputSchema, :user_input)
+      fields = Map.keys(user_input.fields)
+
+      assert :id in fields
+      assert :name in fields
+      assert :email in fields
+      assert :age in fields
+      assert :password_hash in fields
+    end
+
+    test "creates proper input object type" do
+      user_input = Absinthe.Schema.lookup_type(BasicInputSchema, :user_input)
+
+      assert user_input.__struct__ == Absinthe.Type.InputObject
+      assert user_input.identifier == :user_input
+    end
+  end
+
+  describe "gql_input_object/3 with options" do
+    test "respects :except option" do
+      user_input = Absinthe.Schema.lookup_type(FilteredInputSchema, :user_input)
+      fields = Map.keys(user_input.fields)
+
+      assert :name in fields
+      assert :email in fields
+      refute :password_hash in fields
+    end
+  end
+
+  describe "gql_input_object with do block" do
+    test "adds custom fields" do
+      user_input = Absinthe.Schema.lookup_type(CustomFieldInputSchema, :user_input)
+      fields = Map.keys(user_input.fields)
+
+      # Should have auto-generated fields
+      assert :id in fields
+      assert :name in fields
+
+      # Should have custom field
+      assert :password_confirmation in fields
+    end
+
+    test "custom field has correct type" do
+      user_input = Absinthe.Schema.lookup_type(CustomFieldInputSchema, :user_input)
+
+      assert user_input.fields[:password_confirmation].type == :string
+    end
+  end
+
+  describe "gql_input_object field override" do
+    test "overrides auto-generated field" do
+      user_input = Absinthe.Schema.lookup_type(OverrideFieldInputSchema, :user_input)
+      fields = Map.keys(user_input.fields)
+
+      # :name should exist (from override in do block)
+      assert :name in fields
+
+      # :age should not exist (excluded via :except)
+      refute :age in fields
+    end
+  end
 end
