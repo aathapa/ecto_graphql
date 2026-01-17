@@ -90,7 +90,7 @@ defmodule Mix.Tasks.Gql.Gen do
       Mix.raise("mix gql.gen can only be run within an application directory")
     end
 
-    {context, schema, fields} = parse_args(args)
+    {context, schema, fields, schema_module} = parse_args(args)
 
     app = Mix.Project.config()[:app]
     base = Macro.camelize(Atom.to_string(app))
@@ -104,6 +104,7 @@ defmodule Mix.Tasks.Gql.Gen do
       context: context,
       context_slug: context_slug,
       schema: schema,
+      schema_module: schema_module,
       fields: fields,
       schema_plural: String.downcase(schema) <> "s",
       schema_singular: String.downcase(schema)
@@ -192,7 +193,7 @@ defmodule Mix.Tasks.Gql.Gen do
         handle_args(context, schema, arg3)
 
       [context, schema | fields] ->
-        {context, schema, parse_fields(fields)}
+        {context, schema, parse_fields(fields), nil}
 
       _ ->
         raise_invalid_args()
@@ -214,7 +215,7 @@ defmodule Mix.Tasks.Gql.Gen do
       load_from_file(context, schema, arg)
     else
       # Single field provided: Context Schema field:type
-      {context, schema, parse_fields([arg])}
+      {context, schema, parse_fields([arg]), nil}
     end
   end
 
@@ -222,9 +223,9 @@ defmodule Mix.Tasks.Gql.Gen do
 
   defp load_from_file(context, schema, file) do
     case EctoGraphql.SchemaLoader.load(file) do
-      {:ok, %{source: source, fields: fields}} ->
+      {:ok, %{module: module, source: source, fields: fields}} ->
         schema_name = schema || source
-        {context, schema_name, fields}
+        {context, schema_name, fields, module}
 
       _ ->
         Mix.raise("Could not load schema from #{file}")

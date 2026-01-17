@@ -1,7 +1,10 @@
-  object :<%= @schema_singular %> do
-    <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
-    <% end %>  end
+<%= if @schema_module do %>  gql_object :<%= @schema_singular %>, <%= inspect(@schema_module) %>
+  gql_input_object :<%= @schema_singular %>_params, <%= inspect(@schema_module) %>
+<% else %>  object :<%= @schema_singular %> do
+<%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
+<% end %>  end
 
   input_object :<%= @schema_singular %>_params do
 <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
 <% end %>  end
+<% end %>

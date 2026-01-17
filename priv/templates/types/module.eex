@@ -1,9 +1,11 @@
 defmodule <%= @web_mod %>.Graphql.<%= @context %>.Types do
-  use Absinthe.Schema.Notation
-
   @moduledoc """
   GraphQL types for the <%= @context %> context.
   """
+
+  use Absinthe.Schema.Notation
+  use EctoGraphql
+
 
   # content go here
 end
