@@ -3,7 +3,7 @@ defmodule EctoGraphql.GqlFields do
   Provides the `gql_fields/2` macro for generating Absinthe field definitions from Ecto schemas.
 
   The `gql_fields` macro extracts field information from an Ecto schema and generates
-  corresponding Absinthe field definitions.
+  corresponding Absinthe field definitions, including associations with dataloader resolvers.
 
   Use gql_fields to insert auto-generated fields at a specific location within an object block.
 
@@ -17,6 +17,21 @@ defmodule EctoGraphql.GqlFields do
 
   This will generate field definitions for all fields in the schema: `:id`, `:name`,
   `:email`, etc., with appropriate GraphQL types.
+
+  ## Association Support
+
+  Associations (has_one, has_many, belongs_to) are automatically detected and
+  generated with dataloader resolvers:
+
+      # If User has_many :posts, generates:
+      # field :posts, list_of(:post), resolve: dataloader(:ecto)
+
+      # If User belongs_to :organization, generates:
+      # field :organization, :organization, resolve: dataloader(:ecto)
+
+  Make sure to import the dataloader helper and configure your schema:
+
+      import Absinthe.Resolution.Helpers, only: [dataloader: 1]
 
   ## Field Filtering
 
@@ -121,16 +136,44 @@ defmodule EctoGraphql.GqlFields do
   def __define_fields__(schema_module, opts) do
     ensure_ecto_schema!(schema_module)
     all_fields = EctoGraphql.SchemaHelper.extract_fields(schema_module)
-    filtered_fields = filter_fields(all_fields, opts)
+    filtered_fields = filter_by_field_name(all_fields, opts)
 
-    for {field_name, field_type} <- filtered_fields do
-      quote do
-        field(unquote(field_name), unquote(field_type))
+    field_asts =
+      for {field_name, field_type} <- filtered_fields do
+        quote do
+          field(unquote(field_name), unquote(field_type))
+        end
+      end
+
+    association_asts = build_association_asts(schema_module, opts)
+
+    field_asts ++ association_asts
+  end
+
+  defp build_association_asts(schema_module, opts) do
+    if Keyword.get(opts, :include_associations, true) == false do
+      []
+    else
+      all_associations = EctoGraphql.SchemaHelper.extract_associations(schema_module)
+      filtered_associations = filter_by_field_name(all_associations, opts)
+
+      for {assoc_name, assoc_type, cardinality} <- filtered_associations do
+        gql_type =
+          case cardinality do
+            :one -> assoc_type
+            :many -> quote(do: list_of(unquote(assoc_type)))
+          end
+
+        quote do
+          field(unquote(assoc_name), unquote(gql_type),
+            resolve: Absinthe.Resolution.Helpers.dataloader(:ecto)
+          )
+        end
       end
     end
   end
 
-  defp filter_fields(all_fields, opts) do
+  defp filter_by_field_name(items, opts) do
     only = Keyword.get(opts, :only)
     except = Keyword.get(opts, :except, [])
 
@@ -139,13 +182,13 @@ defmodule EctoGraphql.GqlFields do
         raise ArgumentError, "gql_fields/2 accepts either :only or :except, not both"
 
       only ->
-        Enum.filter(all_fields, &(elem(&1, 0) in only))
+        Enum.filter(items, &(elem(&1, 0) in only))
 
-      except ->
-        Enum.filter(all_fields, &(elem(&1, 0) not in except))
+      except != [] ->
+        Enum.filter(items, &(elem(&1, 0) not in except))
 
       true ->
-        all_fields
+        items
     end
   end
 

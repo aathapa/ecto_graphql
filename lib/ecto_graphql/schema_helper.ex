@@ -71,4 +71,39 @@ defmodule EctoGraphql.SchemaHelper do
   def map_type(:map), do: :json
   def map_type({:map, _}), do: :json
   def map_type(_), do: :string
+
+  @doc """
+  Extracts associations from an Ecto schema module.
+
+  ## Parameters
+
+    * `module` - The Ecto schema module
+
+  ## Returns
+
+    List of `{field_name, graphql_type, cardinality}` tuples where:
+    - `field_name` is the association field name
+    - `graphql_type` is the GraphQL type (derived from related schema)
+    - `cardinality` is `:one` or `:many`
+
+  ## Examples
+
+      iex> SchemaHelper.extract_associations(MyApp.Blog.Post)
+      [{:author, :user, :one}, {:comments, :comment, :many}]
+  """
+  def extract_associations(module) do
+    Enum.map(module.__schema__(:associations), fn assoc_name ->
+      assoc = module.__schema__(:association, assoc_name)
+      gql_type = association_to_gql_type(assoc.related)
+      {assoc_name, gql_type, assoc.cardinality}
+    end)
+  end
+
+  defp association_to_gql_type(related_module) do
+    related_module
+    |> Module.split()
+    |> List.last()
+    |> Macro.underscore()
+    |> String.to_atom()
+  end
 end

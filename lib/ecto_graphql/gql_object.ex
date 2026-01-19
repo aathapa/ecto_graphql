@@ -223,6 +223,8 @@ defmodule EctoGraphql.GqlObject do
   defp generate_input_object(name, schema_module, opts, do_block) do
     overridden_fields = if do_block, do: extract_field_names(do_block), else: []
     filtered_opts = filter_overridden_fields(overridden_fields, opts)
+    # Input objects should not include associations
+    filtered_opts = Keyword.put(filtered_opts, :include_associations, false)
 
     quote do
       input_object(unquote(name)) do
