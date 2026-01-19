@@ -6,7 +6,16 @@ defmodule ExampleWeb.Graphql.Schema do
 
   @spec context(map()) :: map()
   def context(ctx) do
-    ctx
+    loader =
+      Dataloader.new()
+      |> Dataloader.add_source(:ecto, Dataloader.Ecto.new(Example.Repo))
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  @spec plugins() :: [Absinthe.Plugin.t()]
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
   end
 
   query do

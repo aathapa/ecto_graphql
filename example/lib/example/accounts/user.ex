@@ -5,6 +5,7 @@ defmodule Example.Accounts.User do
   schema "users" do
     field :name, :string
     field :email, :string
+    has_one :profile, Example.Accounts.Profile
 
     timestamps(type: :utc_datetime)
   end

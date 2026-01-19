@@ -1,23 +1,14 @@
 defmodule ExampleWeb.Graphql.Accounts.Types do
   use Absinthe.Schema.Notation
+  use EctoGraphql
 
   @moduledoc """
   GraphQL types for the Accounts context.
   """
 
-  object :user do
-    field(:id, :id)
-    field(:name, :string)
-    field(:email, :string)
-    field(:inserted_at, :datetime)
-    field(:updated_at, :datetime)
-  end
+  gql_object(:user, Example.Accounts.User)
+  gql_input_object(:user_params, Example.Accounts.User)
 
-  input_object :user_params do
-    field(:id, :id)
-    field(:name, :string)
-    field(:email, :string)
-    field(:inserted_at, :datetime)
-    field(:updated_at, :datetime)
-  end
+  gql_object(:profile, Example.Accounts.Profile)
+  gql_input_object(:profile_params, Example.Accounts.Profile)
 end
