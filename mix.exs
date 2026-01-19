@@ -26,7 +26,8 @@ defmodule EctoGraphql.MixProject do
       source_ref: "v#{@version}",
       source_url: @github_url,
       extras: [
-        "README.md": [title: "Overview"]
+        "README.md": [title: "Overview"],
+        "CHANGELOG.md": [title: "Changelog"]
       ],
       groups_for_modules: [
         Core: [
@@ -70,7 +71,7 @@ defmodule EctoGraphql.MixProject do
       name: "ecto_graphql",
       licenses: ["MIT"],
       links: %{"GitHub" => @github_url},
-      files: ~w(.formatter.exs mix.exs README.md lib)
+      files: ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib priv)
     ]
   end
 end

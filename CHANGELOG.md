@@ -1,0 +1,43 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] - 2025-01-19
+
+### Added
+
+- **Association Support**: Automatic handling of Ecto schema associations (`has_one`, `has_many`, `belongs_to`) in GraphQL types
+  - New `extract_associations/1` function in `EctoGraphql.SchemaHelper` to extract association metadata from Ecto schemas
+  - Association fields are automatically generated with Dataloader resolvers in `gql_fields` macro
+  - New `:include_associations` option for `gql_fields` (defaults to `true`)
+
+- **Dataloader Integration**: Built-in support for Dataloader in generated schemas
+  - `gql.gen.init` task now adds `dataloader` dependency to `mix.exs`
+  - Generated root schema includes `context/1` function with Dataloader setup
+  - Generated root schema includes `plugins/0` function with `Absinthe.Middleware.Dataloader`
+
+- **Optional Dataloader Dependency**: Added `{:dataloader, "~> 2.0", optional: true}` as an optional dependency
+
+### Changed
+
+- Renamed `filter_by_name/2` to `filter_by_field_name/2` in `EctoGraphql.GqlFields` for clarity
+- Input objects (`gql_input_object`) now automatically exclude association fields
+
+### Fixed
+
+- Resolved issue where association fields caused compilation errors in input object types
+- Fixed Dataloader function availability by using fully qualified module path `Absinthe.Resolution.Helpers.dataloader/1`
+
+## [0.2.0] - - 2025-01-09
+
+### Added
+
+- Initial release with `gql_object` and `gql_fields` macros
+- `mix gql.gen` task for generating GraphQL types, schemas, and resolvers
+- `mix gql.gen.init` task for initializing Absinthe in a Phoenix project
+- Automatic type mapping from Ecto to GraphQL types
+- Field filtering with `:only` and `:except` options
+- Custom field support via `do` blocks
