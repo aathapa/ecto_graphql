@@ -8,10 +8,11 @@
 
 It derives:
 
-* GraphQL **object and input types** from Ecto schemas
-* **Query and mutation** definitions
-* **Resolver stubs** ready for your business logic
-* Automatic **integration** with your root schema
+- GraphQL **object and input types** from Ecto schemas
+- **Association fields** with automatic Dataloader resolution
+- **Query and mutation** definitions
+- **Resolver stubs** ready for your business logic
+- Automatic **integration** with your root schema
 
 The goal is to eliminate repetitive boilerplate by deriving your GraphQL API directly from your Ecto schemas.
 
@@ -22,7 +23,8 @@ Add the dependency to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto_graphql, "~> 0.2.0"}
+    {:ecto_graphql, "~> 0.2.0"},
+    {:dataloader, "~> 2.0"}  # Required for association support
   ]
 end
 ```
@@ -37,11 +39,11 @@ mix deps.get
 
 Using a single Mix task, EctoGraphql generates:
 
-* **GraphQL types** — object types and input types for mutations
-* **Queries** — list all and get by ID
-* **Mutations** — create, update, and delete operations
-* **Resolvers** — function stubs for you to implement business logic
-* **Automatic imports** — seamless integration into your root schema
+- **GraphQL types** — object types and input types for mutations
+- **Queries** — list all and get by ID
+- **Mutations** — create, update, and delete operations
+- **Resolvers** — function stubs for you to implement business logic
+- **Automatic imports** — seamless integration into your root schema
 
 All generated code is **plain Elixir** that you can modify, extend, or refactor as needed.
 
@@ -75,7 +77,6 @@ mix gql.gen Accounts User name:string email:string age:integer
 ```
 
 For quick prototyping or when you don't have an Ecto schema yet.
-
 
 ## Generated File Structure
 
@@ -130,6 +131,58 @@ defmodule MyAppWeb.Schema.Types do
 end
 ```
 
+### Association Support
+
+EctoGraphql automatically detects `has_one`, `has_many`, and `belongs_to` associations and generates fields with Dataloader resolvers:
+
+```elixir
+# Given this Ecto schema:
+defmodule MyApp.Accounts.User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :name, :string
+    has_one :profile, MyApp.Accounts.Profile
+    has_many :posts, MyApp.Blog.Post
+  end
+end
+
+# This:
+gql_object(:user, MyApp.Accounts.User)
+
+# Generates:
+object :user do
+  field :id, :id
+  field :name, :string
+  field :profile, :profile, resolve: dataloader(:ecto)
+  field :posts, list_of(:post), resolve: dataloader(:ecto)
+end
+```
+
+**Note:** Input objects (`gql_input_object`) automatically exclude associations since they're not valid input types.
+
+#### Dataloader Setup
+
+To use associations, configure Dataloader in your schema:
+
+```elixir
+defmodule MyAppWeb.Graphql.Schema do
+  use Absinthe.Schema
+
+  def context(ctx) do
+    loader =
+      Dataloader.new()
+      |> Dataloader.add_source(:ecto, Dataloader.Ecto.new(MyApp.Repo))
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
+  end
+end
+```
+
 ### `gql_object` - Complete Object Definitions
 
 Use `gql_object` to quickly create a complete GraphQL object from an Ecto schema.
@@ -163,7 +216,7 @@ gql_object :user, MyApp.Accounts.User do
       {:ok, "#{user.first_name} #{user.last_name}"}
     end
   end
-  
+
   # Override an auto-generated field
   field :email, :string do
     resolve fn user, _, _ ->
@@ -203,14 +256,14 @@ end
 ```elixir
 object :user do
   gql_fields(MyApp.Accounts.User, except: [:password_hash])
-  
+
   # Add custom fields
   field :avatar_url, :string do
     resolve fn user, _, _ ->
       {:ok, "https://cdn.example.com/avatars/#{user.id}.jpg"}
     end
   end
-  
+
   field :is_admin, :boolean do
     resolve fn user, _, _ ->
       {:ok, user.role == :admin}
@@ -225,7 +278,7 @@ end
 object :user_profile do
   gql_fields(MyApp.Accounts.User, only: [:id, :name, :email])
   gql_fields(MyApp.Accounts.Profile, except: [:user_id, :id])
-  
+
   # Add computed fields
   field :display_name, :string
 end
@@ -234,11 +287,13 @@ end
 #### When to Use Each Macro
 
 **Use `gql_object` when:**
+
 - You want a quick, complete object definition
 - Most fields map directly from your Ecto schema
 - You only need to add a few custom fields
 
 **Use `gql_fields` when:**
+
 - You need precise control over field ordering
 - You're combining fields from multiple schemas
 - You want to mix auto-generated and custom fields explicitly
@@ -255,8 +310,9 @@ mix gql.gen Accounts lib/my_app/accounts/user.ex
 ```
 
 This generates:
+
 - `lib/my_app_web/graphql/accounts/types.ex` - Object and input_object types
-- `lib/my_app_web/graphql/accounts/schema.ex` - Query and mutation definitions  
+- `lib/my_app_web/graphql/accounts/schema.ex` - Query and mutation definitions
 - `lib/my_app_web/graphql/accounts/resolvers.ex` - Resolver function stubs
 
 ### Initialize
@@ -315,6 +371,7 @@ This preserves the separation between your GraphQL layer and business logic.
 Generated modules are automatically imported into your root schema:
 
 **lib/example_web/graphql/types.ex**:
+
 ```elixir
 defmodule ExampleWeb.Graphql.Types do
   use Absinthe.Schema.Notation
@@ -325,6 +382,7 @@ end
 ```
 
 **lib/example_web/graphql/schema.ex**:
+
 ```elixir
 defmodule ExampleWeb.Graphql.Schema do
   use Absinthe.Schema
@@ -362,6 +420,7 @@ See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type 
 ## Features
 
 - ✅ **Automatic field extraction** from Ecto schemas
+- ✅ **Association support** with Dataloader resolution
 - ✅ **Smart type mapping** (Ecto → GraphQL)
 - ✅ **Table name singularization** (`users` → `user`)
 - ✅ **Auto-integration** with existing schemas
@@ -373,14 +432,12 @@ See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type 
 
 EctoGraphql follows these principles:
 
-* **Generated code is yours** — modify, extend, or refactor as needed
-* **No runtime magic** — plain Absinthe code you can read and understand
-* **Explicit over clever** — predictable generation, no surprises
-* **Single source of truth** — Ecto schemas drive your GraphQL API
+- **Generated code is yours** — modify, extend, or refactor as needed
+- **No runtime magic** — plain Absinthe code you can read and understand
+- **Explicit over clever** — predictable generation, no surprises
+- **Single source of truth** — Ecto schemas drive your GraphQL API
 
 If the generated code is hard to read or modify, it doesn't belong here.
-
-
 
 ## Documentation
 
