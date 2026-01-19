@@ -56,7 +56,8 @@ defmodule EctoGraphql.MixProject do
     [
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:ecto, "~> 3.10"},
-      {:absinthe, "~> 1.9"}
+      {:absinthe, "~> 1.9"},
+      {:dataloader, "~> 2.0", optional: true}
     ]
   end
 
