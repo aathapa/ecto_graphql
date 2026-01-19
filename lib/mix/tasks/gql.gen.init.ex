@@ -7,9 +7,10 @@ defmodule Mix.Tasks.Gql.Gen.Init do
       $ mix gql.gen.init
 
   This task:
-  1. Creates `lib/my_app_web/graphql/schema.ex` (Root Schema).
+  1. Creates `lib/my_app_web/graphql/schema.ex` (Root Schema with Dataloader support).
   2. Creates `lib/my_app_web/graphql/types.ex` (Agreggator).
   3. Injects `Absinthe.Plug` routes into `lib/my_app_web/router.ex`.
+  4. Adds `absinthe`, `absinthe_plug`, and `dataloader` dependencies to `mix.exs`.
   """
 
   use Mix.Task
@@ -66,6 +67,7 @@ defmodule Mix.Tasks.Gql.Gen.Init do
         new_deps = """
             {:absinthe, "~> 1.9.0"},
             {:absinthe_plug, "~> 1.5.9"},
+            {:dataloader, "~> 2.0"},
         """
 
         new_content = Regex.replace(~r/(defp deps do\s+\[)/, content, "\\1\n#{new_deps}")
@@ -153,7 +155,17 @@ defmodule Mix.Tasks.Gql.Gen.Init do
 
       @spec context(map()) :: map()
       def context(ctx) do
-        ctx
+        source = Dataloader.Ecto.new(<%= @base %>.Repo)
+        loader = Dataloader.new()
+        |> Dataloader.add_source(:ecto, source)
+        # Add sources as needed:
+
+        Map.put(ctx, :loader, loader)
+      end
+
+      @spec plugins() :: [Absinthe.Plugin.t()]
+      def plugins do
+        [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
       end
 
       query do
