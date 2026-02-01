@@ -71,6 +71,7 @@ defmodule EctoGraphql.GqlFieldsTest do
     test "maps types correctly" do
       user_type = Absinthe.Schema.lookup_type(BasicSchema, :user)
 
+      # All fields are nullable by default (no automatic non_null for primary keys)
       assert user_type.fields[:id].type == :id
       assert user_type.fields[:name].type == :string
       assert user_type.fields[:email].type == :string

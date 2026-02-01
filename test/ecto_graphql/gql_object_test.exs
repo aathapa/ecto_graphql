@@ -260,4 +260,89 @@ defmodule EctoGraphql.GqlObjectTest do
       refute :age in fields
     end
   end
+
+  #
+  # Non-null Tests
+  #
+
+  defmodule NonNullExplicitSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    # Use :non_null option to mark fields as non_null
+    gql_object(:user, EctoGraphql.GqlObjectTest.TestUser, non_null: [:id, :name, :email])
+  end
+
+  defmodule NullableOverrideSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    # :nullable takes precedence over :non_null
+    gql_object(:user, EctoGraphql.GqlObjectTest.TestUser, 
+      non_null: [:id, :name, :email], 
+      nullable: [:id]
+    )
+  end
+
+  defmodule InputObjectNonNullSchema do
+    use Absinthe.Schema
+    use EctoGraphql
+
+    query do
+      field(:dummy, :string)
+    end
+
+    # Input objects should NOT have non_null applied
+    gql_input_object(:user_input, EctoGraphql.GqlObjectTest.TestUser, non_null: [:id, :name, :email])
+  end
+
+  describe "gql_object with explicit :non_null option" do
+    test "wraps specified fields with non_null type" do
+      user_type = Absinthe.Schema.lookup_type(NonNullExplicitSchema, :user)
+
+      # Explicitly declared non_null fields should be wrapped
+      assert user_type.fields[:id].type == %Absinthe.Type.NonNull{of_type: :id}
+      assert user_type.fields[:name].type == %Absinthe.Type.NonNull{of_type: :string}
+      assert user_type.fields[:email].type == %Absinthe.Type.NonNull{of_type: :string}
+
+      # Other fields should NOT be wrapped
+      assert user_type.fields[:age].type == :integer
+    end
+  end
+
+  describe "gql_object with :nullable option" do
+    test "nullable takes precedence over non_null" do
+      user_type = Absinthe.Schema.lookup_type(NullableOverrideSchema, :user)
+
+      # :id should be nullable (nullable takes precedence)
+      assert user_type.fields[:id].type == :id
+
+      # :name and :email should be non_null
+      assert user_type.fields[:name].type == %Absinthe.Type.NonNull{of_type: :string}
+      assert user_type.fields[:email].type == %Absinthe.Type.NonNull{of_type: :string}
+
+      # Other fields are nullable by default
+      assert user_type.fields[:age].type == :integer
+    end
+  end
+
+  describe "gql_input_object non_null behavior" do
+    test "does NOT apply non_null to input objects even with option" do
+      user_input = Absinthe.Schema.lookup_type(InputObjectNonNullSchema, :user_input)
+
+      # All fields should be nullable in input objects, even if non_null option is passed
+      assert user_input.fields[:id].type == :id
+      assert user_input.fields[:name].type == :string
+      assert user_input.fields[:email].type == :string
+      assert user_input.fields[:age].type == :integer
+    end
+  end
 end
