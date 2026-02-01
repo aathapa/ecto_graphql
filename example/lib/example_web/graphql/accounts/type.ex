@@ -6,7 +6,8 @@ defmodule ExampleWeb.Graphql.Accounts.Types do
   GraphQL types for the Accounts context.
   """
 
-  gql_object(:user, Example.Accounts.User)
+  # Mark id, name and email as non-null fields
+  gql_object(:user, Example.Accounts.User, non_null: [:id, :name, :email])
   gql_input_object(:user_params, Example.Accounts.User)
 
   gql_object(:profile, Example.Accounts.Profile)
