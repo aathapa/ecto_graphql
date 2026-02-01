@@ -69,7 +69,12 @@ defmodule EctoGraphql.GqlFields do
   Otherwise, use `gql_object` for simpler, complete object definitions.
   """
 
-  @type field_opts :: [only: [atom()]] | [except: [atom()]] | []
+  @type field_opts :: [
+          only: [atom()],
+          except: [atom()],
+          non_null: [atom()],
+          nullable: [atom()]
+        ]
 
   @doc """
   Generates Absinthe field definitions from an Ecto schema.
@@ -80,8 +85,24 @@ defmodule EctoGraphql.GqlFields do
     * `opts` - Optional keyword list:
       * `:only` - List of field names to include (atoms)
       * `:except` - List of field names to exclude (atoms)
+      * `:non_null` - List of additional field names to mark as non-null (atoms)
+      * `:nullable` - List of field names to exclude from non-null (atoms)
 
   You cannot specify both `:only` and `:except` - an `ArgumentError` will be raised.
+
+  ## Non-null Behavior
+
+  Fields are marked as `non_null` based on:
+
+  1. Fields in the `:nullable` option are always nullable (takes precedence)
+  2. Fields in the `:non_null` option are marked as non-null
+
+  Non-null is not applied when used inside `gql_input_object`.
+
+  ## Examples
+
+      # Mark specific fields as non-null
+      gql_fields(MyApp.User, non_null: [:id, :name, :email])
 
   ## Examples
 
@@ -138,16 +159,45 @@ defmodule EctoGraphql.GqlFields do
     all_fields = EctoGraphql.SchemaHelper.extract_fields(schema_module)
     filtered_fields = filter_by_field_name(all_fields, opts)
 
+    non_null_fields = compute_non_null_fields(schema_module, opts)
+
     field_asts =
       for {field_name, field_type} <- filtered_fields do
+        gql_type = maybe_wrap_non_null(field_name, field_type, non_null_fields)
+
         quote do
-          field(unquote(field_name), unquote(field_type))
+          field(unquote(field_name), unquote(gql_type))
         end
       end
 
     association_asts = build_association_asts(schema_module, opts)
 
     field_asts ++ association_asts
+  end
+
+  defp compute_non_null_fields(_schema_module, opts) do
+    # Don't apply non_null for input objects (internal flag set by gql_input_object)
+    if Keyword.get(opts, :__input_object__, false) do
+      []
+    else
+      # Get explicit non_null fields from options
+      non_null_fields = Keyword.get(opts, :non_null, [])
+
+      # Exclude fields in nullable option
+      nullable_fields = Keyword.get(opts, :nullable, [])
+
+      non_null_fields
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 in nullable_fields))
+    end
+  end
+
+  defp maybe_wrap_non_null(field_name, field_type, non_null_fields) do
+    if field_name in non_null_fields do
+      quote do: non_null(unquote(field_type))
+    else
+      field_type
+    end
   end
 
   defp build_association_asts(schema_module, opts) do

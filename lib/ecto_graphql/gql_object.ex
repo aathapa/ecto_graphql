@@ -98,7 +98,12 @@ defmodule EctoGraphql.GqlObject do
   schemas, use `gql_fields` instead.
   """
 
-  @type object_opts :: [only: [atom()]] | [except: [atom()]] | []
+  @type object_opts :: [
+          only: [atom()],
+          except: [atom()],
+          non_null: [atom()],
+          nullable: [atom()]
+        ]
 
   @doc "See `gql_object/4`."
   @spec gql_object(atom(), module()) :: Macro.t()
@@ -126,6 +131,8 @@ defmodule EctoGraphql.GqlObject do
     * `opts` - Optional keyword list:
       * `:only` - List of field names to include (atoms)
       * `:except` - List of field names to exclude (atoms)
+      * `:non_null` - List of additional field names to mark as non-null (atoms)
+      * `:nullable` - List of field names to exclude from non-null (atoms)
     * `do` block - Optional block for custom field definitions
 
   ## Examples
@@ -136,6 +143,12 @@ defmodule EctoGraphql.GqlObject do
       # With filtering
       gql_object(:user, MyApp.Accounts.User, only: [:id, :name, :email])
       gql_object(:user, MyApp.Accounts.User, except: [:password_hash])
+
+      # With non_null fields (in addition to schema-defined ones)
+      gql_object(:user, MyApp.Accounts.User, non_null: [:name, :email])
+
+      # Override schema non_null to make a field nullable
+      gql_object(:user, MyApp.Accounts.User, nullable: [:email])
 
       # With custom fields
       gql_object :user, MyApp.Accounts.User do
@@ -154,6 +167,21 @@ defmodule EctoGraphql.GqlObject do
           end
         end
       end
+
+  ## Non-null Behavior
+
+  Fields are wrapped with `non_null()` only when explicitly specified in the `:non_null` option.
+  Use the `:nullable` option to exclude specific fields from being non-null.
+
+  Non-null is NOT applied to `input_object` definitions.
+
+  ## Examples
+
+      # Mark specific fields as non-null (including id)
+      gql_object(:user, MyApp.User, non_null: [:id, :name, :email])
+
+      # Mark only some fields as non-null
+      gql_object(:user, MyApp.User, non_null: [:name, :email])
 
   ## Field Override Behavior
 
@@ -223,8 +251,12 @@ defmodule EctoGraphql.GqlObject do
   defp generate_input_object(name, schema_module, opts, do_block) do
     overridden_fields = if do_block, do: extract_field_names(do_block), else: []
     filtered_opts = filter_overridden_fields(overridden_fields, opts)
-    # Input objects should not include associations
-    filtered_opts = Keyword.put(filtered_opts, :include_associations, false)
+    
+    # Input objects should not include associations or apply non_null
+    filtered_opts =
+      filtered_opts
+      |> Keyword.put(:include_associations, false)
+      |> Keyword.put(:__input_object__, true)
 
     quote do
       input_object(unquote(name)) do
