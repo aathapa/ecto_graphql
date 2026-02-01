@@ -239,6 +239,42 @@ gql_object :user, MyApp.Accounts.User, except: [:inserted_at, :updated_at] do
 end
 ```
 
+#### Non-null Fields
+
+Mark fields as `non_null` to make them required in GraphQL. This matches GraphQL's type system where `non_null` fields cannot be null.
+
+```elixir
+# Mark specific fields as non-null
+gql_object(:user, MyApp.Accounts.User, non_null: [:id, :name, :email])
+
+# Generates:
+# field :id, non_null(:id)
+# field :name, non_null(:string)
+# field :email, non_null(:string)
+# field :password_hash, :string  # nullable
+```
+
+**Override with `:nullable`** (takes precedence):
+
+```elixir
+gql_object(:user, MyApp.Accounts.User,
+  non_null: [:id, :name, :email],
+  nullable: [:email]  # Make email nullable despite being in non_null
+)
+
+# Result:
+# field :id, non_null(:id)
+# field :name, non_null(:string)
+# field :email, :string  # nullable due to override
+```
+
+**Important:** `non_null` is NOT applied to `input_object` types, as input fields are typically optional:
+
+```elixir
+gql_input_object(:user_input, MyApp.Accounts.User, non_null: [:name])
+# All fields remain nullable in input objects
+```
+
 ### `gql_fields` - Field Generation
 
 Use `gql_fields` when you need fine-grained control over your object structure.
@@ -281,6 +317,17 @@ object :user_profile do
 
   # Add computed fields
   field :display_name, :string
+end
+```
+
+#### Non-null with `gql_fields`
+
+The `non_null` and `nullable` options work the same way with `gql_fields`:
+
+```elixir
+object :user do
+  gql_fields(MyApp.Accounts.User, non_null: [:id, :name, :email])
+
 end
 ```
 
@@ -421,6 +468,7 @@ See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type 
 
 - ✅ **Automatic field extraction** from Ecto schemas
 - ✅ **Association support** with Dataloader resolution
+- ✅ **Non-null field support** for required fields
 - ✅ **Smart type mapping** (Ecto → GraphQL)
 - ✅ **Table name singularization** (`users` → `user`)
 - ✅ **Auto-integration** with existing schemas
