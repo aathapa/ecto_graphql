@@ -5,16 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-02-01
+
+### Added
+
+- **Non-null Field Support**: Added `:non_null` and `:nullable` options to `gql_object` and `gql_fields` macros
+  - Fields can be marked as `non_null` by passing `non_null: [:field1, :field2]` option
+  - The `:nullable` option takes precedence and can override fields marked as non-null
+  - Non-null wrapping is automatically skipped for `input_object` types (input fields remain nullable)
+
 ## [0.3.0] - 2025-01-19
 
 ### Added
 
 - **Association Support**: Automatic handling of Ecto schema associations (`has_one`, `has_many`, `belongs_to`) in GraphQL types
+
   - New `extract_associations/1` function in `EctoGraphql.SchemaHelper` to extract association metadata from Ecto schemas
   - Association fields are automatically generated with Dataloader resolvers in `gql_fields` macro
   - New `:include_associations` option for `gql_fields` (defaults to `true`)
 
 - **Dataloader Integration**: Built-in support for Dataloader in generated schemas
+
   - `gql.gen.init` task now adds `dataloader` dependency to `mix.exs`
   - Generated root schema includes `context/1` function with Dataloader setup
   - Generated root schema includes `plugins/0` function with `Absinthe.Middleware.Dataloader`

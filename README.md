@@ -23,7 +23,7 @@ Add the dependency to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto_graphql, "~> 0.2.0"},
+    {:ecto_graphql, "~> 0.3.1"},
     {:dataloader, "~> 2.0"}  # Required for association support
   ]
 end
