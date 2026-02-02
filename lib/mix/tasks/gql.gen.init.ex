@@ -24,7 +24,7 @@ defmodule Mix.Tasks.Gql.Gen.Init do
     end
 
     app = Mix.Project.config()[:app]
-    base = Macro.camelize(Atom.to_string(app))
+    base = app |> Atom.to_string() |> Macro.camelize()
     web_mod = base <> "Web"
 
     binding = [

@@ -39,8 +39,8 @@ defmodule EctoGraphql.Generator do
 
       # Generate types file
       Generator.generate(
-        :type,
         "lib/my_app_web/graphql/accounts/type.ex",
+        :type,
         [
           app: :my_app,
           context: "Accounts",
@@ -72,17 +72,20 @@ defmodule EctoGraphql.Generator do
 
   ## Parameters
 
-    * `graphql_type` - The type of GraphQL file: `:type`, `:schema`, or `:resolver`
     * `file_path` - Target file path (absolute or relative to project root)
+    * `graphql_type` - The type of GraphQL file: `:type`, `:schema`, or `:resolver`
     * `bindings` - Keyword list of template variables
 
   ## Examples
 
-      # Create a new types file
-      Generator.generate(:type, "lib/my_app_web/graphql/accounts/type.ex", bindings)
+      # Create a new types file (recommended)
+      Generator.generate("lib/my_app_web/graphql/accounts/type.ex", :type, bindings)
 
       # Update an existing schema file
-      Generator.generate(:schema, "lib/my_app_web/graphql/accounts/schema.ex", bindings)
+      Generator.generate("lib/my_app_web/graphql/accounts/schema.ex", :schema, bindings)
+
+      # Old argument order (deprecated, but still supported)
+      Generator.generate(:type, "lib/my_app_web/graphql/accounts/type.ex", bindings)
 
   ## Behavior
 
@@ -90,21 +93,51 @@ defmodule EctoGraphql.Generator do
   - If the file exists, appends new definitions using `block.eex`
   - Automatically runs `mix format` on the generated file
   - Never overwrites custom code you've added
+
+  ## Deprecation Notice
+
+  The old argument order `generate(graphql_type, file_path, bindings)` is deprecated.
+  Please use `generate(file_path, graphql_type, bindings)` instead.
   """
-  def generate(graphql_type, file_path, bindings) do
+  def generate(file_path, graphql_type, bindings)
+
+  # New signature: generate(file_path, graphql_type, bindings)
+  def generate(file_path, graphql_type, bindings) when is_binary(file_path) do
+    do_generate(file_path, graphql_type, bindings)
+  end
+
+  # Old signature (deprecated): generate(graphql_type, file_path, bindings)
+  def generate(graphql_type, file_path, bindings) when is_atom(graphql_type) do
+    IO.warn("""
+    Calling Generator.generate/3 with (graphql_type, file_path, bindings) is deprecated.
+    Please use (file_path, graphql_type, bindings) instead.
+
+    Old: Generator.generate(:type, "path/to/file.ex", bindings)
+    New: Generator.generate("path/to/file.ex", :type, bindings)
+    """, Macro.Env.stacktrace(__ENV__))
+
+    do_generate(file_path, graphql_type, bindings)
+  end
+
+  defp do_generate(file_path, graphql_type, bindings) do
     new_content = eex_content(graphql_type, bindings, :block)
 
     if File.exists?(file_path) do
       Mix.shell().info("Updating #{file_path}...")
-      content = File.read!(file_path)
-      updated_content = String.replace(content, ~r/end\s*$/, "\n#{new_content}end")
-      File.write!(file_path, updated_content)
+
+      file_path
+      |> File.read!()
+      |> String.replace(~r/end\s*$/, "\n#{new_content}end")
+      |> then(&File.write!(file_path, &1))
+
       Mix.Task.run("format", [file_path])
     else
       Mix.shell().info("Creating #{file_path}...")
-      content = eex_content(graphql_type, bindings, :module)
-      full_content = String.replace(content, "# content go here", new_content)
-      Mix.Generator.create_file(file_path, full_content, format_elixir: true)
+
+      graphql_type
+      |> eex_content(bindings, :module)
+      |> String.replace("# content go here", new_content)
+      |> then(&Mix.Generator.create_file(file_path, &1, format_elixir: true))
     end
   end
 

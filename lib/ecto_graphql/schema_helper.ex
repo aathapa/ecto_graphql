@@ -92,7 +92,8 @@ defmodule EctoGraphql.SchemaHelper do
       [{:author, :user, :one}, {:comments, :comment, :many}]
   """
   def extract_associations(module) do
-    Enum.map(module.__schema__(:associations), fn assoc_name ->
+    module.__schema__(:associations)
+    |> Enum.map(fn assoc_name ->
       assoc = module.__schema__(:association, assoc_name)
       gql_type = association_to_gql_type(assoc.related)
       {assoc_name, gql_type, assoc.cardinality}

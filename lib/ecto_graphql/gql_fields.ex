@@ -204,8 +204,10 @@ defmodule EctoGraphql.GqlFields do
     if Keyword.get(opts, :include_associations, true) == false do
       []
     else
-      all_associations = EctoGraphql.SchemaHelper.extract_associations(schema_module)
-      filtered_associations = filter_by_field_name(all_associations, opts)
+      filtered_associations =
+        schema_module
+        |> EctoGraphql.SchemaHelper.extract_associations()
+        |> filter_by_field_name(opts)
 
       for {assoc_name, assoc_type, cardinality} <- filtered_associations do
         gql_type =

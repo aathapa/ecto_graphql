@@ -93,7 +93,7 @@ defmodule Mix.Tasks.Gql.Gen do
     {context, schema, fields, schema_module} = parse_args(args)
 
     app = Mix.Project.config()[:app]
-    base = Macro.camelize(Atom.to_string(app))
+    base = app |> Atom.to_string() |> Macro.camelize()
     web_mod = base <> "Web"
     context_slug = String.downcase(context)
 
@@ -122,40 +122,46 @@ defmodule Mix.Tasks.Gql.Gen do
   defp update_type(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
-    file_path = Path.join(dir_path, "type.ex")
 
-    Generator.generate(:type, file_path, binding)
+    dir_path
+    |> Path.join("type.ex")
+    |> Generator.generate(:type, binding)
   end
 
   defp update_resolver(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
-    file_path = Path.join(dir_path, "resolvers.ex")
-    Generator.generate(:resolver, file_path, binding)
+
+    dir_path
+    |> Path.join("resolvers.ex")
+    |> Generator.generate(:resolver, binding)
   end
 
   def update_schema(binding) do
     dir_path = "lib/#{binding[:app]}_web/graphql/#{binding[:context_slug]}"
     File.mkdir_p!(dir_path)
 
-    file_path = Path.join(dir_path, "schema.ex")
-    Generator.generate(:schema, file_path, binding)
+    dir_path
+    |> Path.join("schema.ex")
+    |> Generator.generate(:schema, binding)
   end
 
   defp inject_schema_import(binding) do
     types_aggregator_path = "lib/#{binding[:app]}_web/graphql/types.ex"
 
     if File.exists?(types_aggregator_path) do
-      content = File.read!(types_aggregator_path)
       module_name = "#{binding[:web_mod]}.Graphql.#{binding[:context]}.Schema"
       import_line = "import_types #{module_name}"
 
-      if String.contains?(content, module_name) do
-        :ok
-      else
+      content = File.read!(types_aggregator_path)
+
+      unless String.contains?(content, module_name) do
         Mix.shell().info("Injecting schema import into #{types_aggregator_path}...")
-        new_content = Generator.inject_before_final_end(content, import_line)
-        File.write!(types_aggregator_path, new_content)
+
+        content
+        |> Generator.inject_before_final_end(import_line)
+        |> then(&File.write!(types_aggregator_path, &1))
+
         Mix.Task.run("format", [types_aggregator_path])
       end
     end
