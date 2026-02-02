@@ -286,8 +286,8 @@ defmodule EctoGraphql.GqlObjectTest do
     end
 
     # :nullable takes precedence over :non_null
-    gql_object(:user, EctoGraphql.GqlObjectTest.TestUser, 
-      non_null: [:id, :name, :email], 
+    gql_object(:user, EctoGraphql.GqlObjectTest.TestUser,
+      non_null: [:id, :name, :email],
       nullable: [:id]
     )
   end
@@ -301,7 +301,9 @@ defmodule EctoGraphql.GqlObjectTest do
     end
 
     # Input objects should NOT have non_null applied
-    gql_input_object(:user_input, EctoGraphql.GqlObjectTest.TestUser, non_null: [:id, :name, :email])
+    gql_input_object(:user_input, EctoGraphql.GqlObjectTest.TestUser,
+      non_null: [:id, :name, :email]
+    )
   end
 
   describe "gql_object with explicit :non_null option" do

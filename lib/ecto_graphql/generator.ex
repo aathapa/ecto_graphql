@@ -108,13 +108,16 @@ defmodule EctoGraphql.Generator do
 
   # Old signature (deprecated): generate(graphql_type, file_path, bindings)
   def generate(graphql_type, file_path, bindings) when is_atom(graphql_type) do
-    IO.warn("""
-    Calling Generator.generate/3 with (graphql_type, file_path, bindings) is deprecated.
-    Please use (file_path, graphql_type, bindings) instead.
+    IO.warn(
+      """
+      Calling Generator.generate/3 with (graphql_type, file_path, bindings) is deprecated.
+      Please use (file_path, graphql_type, bindings) instead.
 
-    Old: Generator.generate(:type, "path/to/file.ex", bindings)
-    New: Generator.generate("path/to/file.ex", :type, bindings)
-    """, Macro.Env.stacktrace(__ENV__))
+      Old: Generator.generate(:type, "path/to/file.ex", bindings)
+      New: Generator.generate("path/to/file.ex", :type, bindings)
+      """,
+      Macro.Env.stacktrace(__ENV__)
+    )
 
     do_generate(file_path, graphql_type, bindings)
   end
