@@ -24,6 +24,9 @@ jobs:
           # Elixir 1.16 doesn't support OTP 28
           - elixir: "1.16"
             otp: "28"
+          # Elixir 1.17 + OTP 28 has Hex compatibility issues
+          - elixir: "1.17"
+            otp: "28"
           # Elixir 1.19 requires OTP 27+
           - elixir: "1.19"
             otp: "26"
