@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-02-03
+
+### Added
+
+- **Ecto.Enum Support**: Full support for `Ecto.Enum` fields with automatic GraphQL enum type generation
+
+  - New `gql_enums/2` macro to generate enum type definitions from Ecto schemas
+  - Automatic detection of `Ecto.Enum` fields in schemas
+  - Enum types use compact syntax: `enum(:user_status, values: [:active, :inactive, :pending])`
+  - Enum type names follow convention: `{schema_name}_{field_name}` (e.g., `:user_status`)
+  - Support for `:only` and `:except` filtering options
+  - Object fields automatically reference generated enum types
+  - Works seamlessly with `non_null` option for enum fields
+  - Code generator templates automatically include `gql_enums` calls
+
+- **Backward Compatibility**: `Generator.generate/3` now supports both argument orders
+  - New pipe-friendly order: `generate(file_path, graphql_type, bindings)`
+  - Old order still supported: `generate(graphql_type, file_path, bindings)` (deprecated)
+  - Deprecation warnings guide users to new syntax
+  - No breaking changes - existing code continues to work
+
 ## [0.3.1] - 2025-02-01
 
 ### Added

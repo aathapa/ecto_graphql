@@ -23,7 +23,7 @@ Add the dependency to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto_graphql, "~> 0.3.1"},
+    {:ecto_graphql, "~> 0.4.0"},
     {:dataloader, "~> 2.0"}  # Required for association support
   ]
 end
@@ -181,6 +181,74 @@ defmodule MyAppWeb.Graphql.Schema do
     [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
   end
 end
+```
+
+### Ecto.Enum Support
+
+EctoGraphql automatically detects `Ecto.Enum` fields and generates corresponding GraphQL enum types.
+
+#### Defining Enum Fields in Ecto
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :name, :string
+    field :status, Ecto.Enum, values: [:active, :inactive, :pending]
+    field :role, Ecto.Enum, values: [:admin, :user, :guest]
+  end
+end
+```
+
+#### Using `gql_enums` Macro
+
+To generate GraphQL enum types, use the `gql_enums` macro **at the top level** (not inside `object` blocks):
+
+```elixir
+defmodule MyAppWeb.Schema.Types do
+  use Absinthe.Schema.Notation
+  use EctoGraphql
+
+  # Generate enum types from Ecto.Enum fields
+  gql_enums(MyApp.Accounts.User)
+
+  # Then define your objects
+  gql_object(:user, MyApp.Accounts.User)
+end
+```
+
+This generates:
+
+```elixir
+enum(:user_status, values: [:active, :inactive, :pending])
+enum(:user_role, values: [:admin, :user, :guest])
+
+object :user do
+  field :id, :id
+  field :name, :string
+  field :status, :user_status    # References the enum type
+  field :role, :user_role          # References the enum type
+end
+```
+
+#### Enum Naming Convention
+
+Enum types are automatically named using the pattern: `{schema_name}_{field_name}`
+
+- `User` schema with `status` field → `:user_status` enum type
+- `Post` schema with `visibility` field → `:post_visibility` enum type
+
+#### Filtering Enum Generation
+
+You can control which enums are generated:
+
+```elixir
+# Generate only specific enum types
+gql_enums(MyApp.User, only: [:status])
+
+# Exclude specific enum types
+gql_enums(MyApp.User, except: [:internal_status])
 ```
 
 ### `gql_object` - Complete Object Definitions
@@ -468,6 +536,7 @@ See the [full documentation](https://hexdocs.pm/ecto_graphql) for complete type 
 
 - ✅ **Automatic field extraction** from Ecto schemas
 - ✅ **Association support** with Dataloader resolution
+- ✅ **Ecto.Enum support** with automatic enum type generation
 - ✅ **Non-null field support** for required fields
 - ✅ **Smart type mapping** (Ecto → GraphQL)
 - ✅ **Table name singularization** (`users` → `user`)
