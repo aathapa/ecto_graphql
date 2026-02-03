@@ -6,6 +6,9 @@ defmodule ExampleWeb.Graphql.Accounts.Types do
   GraphQL types for the Accounts context.
   """
 
+  # Generate enum types from Ecto.Enum fields
+  gql_enums(Example.Accounts.User)
+
   # Mark id, name and email as non-null fields
   gql_object(:user, Example.Accounts.User, non_null: [:id, :name, :email])
   gql_input_object(:user_params, Example.Accounts.User)
