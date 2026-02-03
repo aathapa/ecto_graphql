@@ -1,6 +1,6 @@
 defmodule EctoGraphql.GqlFields do
   @moduledoc """
-  Provides the `gql_fields/2` macro for generating Absinthe field definitions from Ecto schemas.
+  Provides macros for generating Absinthe field and enum definitions from Ecto schemas.
 
   The `gql_fields` macro extracts field information from an Ecto schema and generates
   corresponding Absinthe field definitions, including associations with dataloader resolvers.
@@ -153,6 +153,94 @@ defmodule EctoGraphql.GqlFields do
     end
   end
 
+  @doc """
+  Generates Absinthe enum type definitions from Ecto.Enum fields in a schema.
+
+  This macro must be used at the top level of your schema module (not inside object blocks)
+  to generate enum types for any Ecto.Enum fields in your schema.
+
+  ## Usage
+
+      # In your types file
+      gql_enums(MyApp.Accounts.User)
+
+      object :user do
+        gql_fields(MyApp.Accounts.User)
+      end
+
+  ## What it generates
+
+  For a schema with:
+
+      schema "users" do
+        field :status, Ecto.Enum, values: [:active, :inactive, :pending]
+        field :role, Ecto.Enum, values: [:admin, :user, :guest]
+      end
+
+  This will generate:
+
+      enum :user_status do
+        value :active
+        value :inactive
+        value :pending
+      end
+
+      enum :user_role do
+        value :admin
+        value :user
+        value :guest
+      end
+
+  Then your `gql_fields` will reference these enums by name in the object fields.
+
+  ## Options
+
+    * `:only` - List of field names to include enum definitions for
+    * `:except` - List of field names to exclude enum definitions for
+
+  ## Examples
+
+      # Generate all enum types
+      gql_enums(MyApp.User)
+
+      # Generate only specific enum types
+      gql_enums(MyApp.User, only: [:status])
+
+      # Exclude specific enum types
+      gql_enums(MyApp.User, except: [:internal_status])
+  """
+  @spec gql_enums(module(), field_opts()) :: Macro.t()
+  defmacro gql_enums(schema_module, opts \\ []) do
+    ast =
+      schema_module
+      |> Macro.expand(__CALLER__)
+      |> EctoGraphql.GqlFields.__define_enums__(opts)
+
+    quote do
+      (unquote_splicing(ast))
+    end
+  end
+
+  @doc false
+  def __define_enums__(schema_module, opts) do
+    ensure_ecto_schema!(schema_module)
+    all_fields = EctoGraphql.SchemaHelper.extract_fields(schema_module)
+    filtered_fields = filter_by_field_name(all_fields, opts)
+
+    # Extract only enum fields
+    enum_fields =
+      Enum.filter(filtered_fields, fn {_name, type} ->
+        match?({:enum, _, _}, type)
+      end)
+
+    # Generate enum type definitions using compact syntax
+    for {_field_name, {:enum, enum_name, values}} <- enum_fields do
+      quote do
+        enum(unquote(enum_name), values: unquote(values))
+      end
+    end
+  end
+
   @doc false
   def __define_fields__(schema_module, opts) do
     ensure_ecto_schema!(schema_module)
@@ -161,8 +249,12 @@ defmodule EctoGraphql.GqlFields do
 
     non_null_fields = compute_non_null_fields(schema_module, opts)
 
+    # Convert enum fields to use enum type names
+    converted_fields = convert_enum_fields(filtered_fields)
+
+    # Generate field definitions
     field_asts =
-      for {field_name, field_type} <- filtered_fields do
+      for {field_name, field_type} <- converted_fields do
         gql_type = maybe_wrap_non_null(field_name, field_type, non_null_fields)
 
         quote do
@@ -242,6 +334,16 @@ defmodule EctoGraphql.GqlFields do
       true ->
         items
     end
+  end
+
+  defp convert_enum_fields(fields) do
+    Enum.map(fields, fn
+      {field_name, {:enum, enum_name, _values}} ->
+        {field_name, enum_name}
+
+      field ->
+        field
+    end)
   end
 
   defp ensure_ecto_schema!(module) do
