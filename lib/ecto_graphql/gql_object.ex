@@ -133,6 +133,7 @@ defmodule EctoGraphql.GqlObject do
       * `:except` - List of field names to exclude (atoms)
       * `:non_null` - List of additional field names to mark as non-null (atoms)
       * `:nullable` - List of field names to exclude from non-null (atoms)
+      * `:include_associations` - Whether to include association fields (boolean, default: `true`)
     * `do` block - Optional block for custom field definitions
 
   ## Examples
@@ -278,14 +279,10 @@ defmodule EctoGraphql.GqlObject do
     end
   end
 
-  defp extract_field_names({:__block__, _, expressions}) do
-    Enum.flat_map(expressions, &extract_field_names/1)
-  end
+  defp extract_field_names({:__block__, _, expressions}),
+    do: Enum.flat_map(expressions, &extract_field_names/1)
 
-  defp extract_field_names({:field, _, [name | _]}) when is_atom(name) do
-    [name]
-  end
-
+  defp extract_field_names({:field, _, [name | _]}) when is_atom(name), do: [name]
   defp extract_field_names(_), do: []
 
   defp filter_overridden_fields(overridden_fields, opts) do
