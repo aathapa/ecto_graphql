@@ -1,7 +1,7 @@
 <%= if @schema_module do %>  # Generate enum types from Ecto.Enum fields (if any)
   gql_enums <%= inspect(@schema_module) %>
 
-  gql_object :<%= @schema_singular %>, <%= inspect(@schema_module) %>
+  gql_object :<%= @schema_singular %>, <%= inspect(@schema_module) %>, include_associations: false
   gql_input_object :<%= @schema_singular %>_params, <%= inspect(@schema_module) %>
 <% else %>  object :<%= @schema_singular %> do
 <%= for {name, type} <- @fields do %>    field :<%= name %>, :<%= type %>
